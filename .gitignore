@@ -1,0 +1,10 @@
+.env
+__pycache__/
+output/
+.vscode/
+.venv/
+.claude/
+.claudeignore
+.pids
+*.log
+doc/*.pdf
