@@ -4,3 +4,4 @@ beautifulsoup4
 anthropic
 openai
 pypdf
+xhtml2pdf
