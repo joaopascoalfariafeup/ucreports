@@ -33,10 +33,15 @@ if [[ $IS_WSL -eq 1 ]]; then
   PYTHON_CMD="py.exe"
   WAITRESS_BIN=""  # nao usado no ramo WSL
 else
-  # Usar venv se existir, caso contrario python3 do sistema
-  if [[ -f "$ROOT/.venv/bin/waitress-serve" ]]; then
-    PYTHON_CMD="$ROOT/.venv/bin/python3"
-    WAITRESS_BIN="$ROOT/.venv/bin/waitress-serve"
+  # Procurar venv: primeiro em ~/ucreports-venv (filesystem Linux, evita
+  # problemas de permissoes em /mnt/c/), depois em $ROOT/.venv
+  _VENV=""
+  for _v in "$HOME/ucreports-venv" "$ROOT/.venv"; do
+    [[ -f "$_v/bin/waitress-serve" ]] && { _VENV="$_v"; break; }
+  done
+  if [[ -n "$_VENV" ]]; then
+    PYTHON_CMD="$_VENV/bin/python3"
+    WAITRESS_BIN="$_VENV/bin/waitress-serve"
   else
     PYTHON_CMD="python3"
     WAITRESS_BIN="waitress-serve"
