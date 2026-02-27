@@ -534,6 +534,8 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
     if m_ano:
         ano_letivo = m_ano.group(1)
 
+    lingua_trabalho = _extrair_seccao(html, "Língua de trabalho") or ""
+
     programa = _extrair_seccao(html, "Programa")
     programa_html = _extrair_seccao_html(html, "Programa")
     if not programa:
@@ -586,6 +588,7 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
         "sigla_uc": sigla_uc,
         "ano_letivo": ano_letivo,
         "ucurr_id": ucurr_id,
+        "lingua_trabalho": lingua_trabalho,
         "programa": programa,
         "programa_html": programa_html or "",
         "objetivos": objetivos,

@@ -6,6 +6,7 @@ e preenche automaticamente o relatório da UC.
 """
 
 import hashlib
+import io
 import json
 import os
 import re
@@ -28,6 +29,39 @@ from llm_analise import analisar_uc_integrado
 from logger import AuditoriaLogger
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
+
+# Palavras funcionais para detecção de língua (heurística simples, sem bibliotecas extra)
+_PT_WORDS = frozenset("de da do das dos a o as os e em no na nos nas ao à que com para por se ou não um uma é são")
+_EN_WORDS = frozenset("the and of to in is it that was for on are with as at be this have from or an each by")
+
+def _detectar_lingua_pdf(pdf_bytes: bytes) -> str | None:
+    """Detecta a língua dominante de um PDF por heurística de palavras funcionais.
+
+    Returns:
+        'pt', 'en', ou None se inconclusivo.
+    """
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        texto = " ".join(
+            (p.extract_text() or "") for p in reader.pages[:10]
+        ).lower()
+    except Exception:
+        return None
+    tokens = re.findall(r'\b[a-záàâãéêíóôõúüç]+\b', texto)
+    if len(tokens) < 30:
+        return None
+    pt = sum(1 for t in tokens if t in _PT_WORDS)
+    en = sum(1 for t in tokens if t in _EN_WORDS)
+    total = pt + en
+    if total == 0:
+        return None
+    ratio = pt / total
+    if ratio >= 0.65:
+        return "pt"
+    if ratio <= 0.35:
+        return "en"
+    return None  # inconclusivo
 
 
 def _normalizar_nome_enunciado(nome: str) -> str:
@@ -376,6 +410,31 @@ def analisar_uc(
             caminho = pasta_uc / e["nome"]
             caminho.write_bytes(e["pdf_bytes"])
         log.debug(f"  Enunciados guardados em: {pasta_uc}")
+
+    # Verificar língua dos enunciados vs. língua de trabalho da UC
+    lingua_trabalho = ficha.get("lingua_trabalho", "").strip()
+    lt_lower = lingua_trabalho.lower()
+    if "suitable for english" in lt_lower:
+        lingua_esperada = None  # bilingue — não verificar
+    elif "inglês" in lt_lower or "english" in lt_lower:
+        lingua_esperada = "en"
+    elif "português" in lt_lower or "portuguese" in lt_lower:
+        lingua_esperada = "pt"
+    else:
+        lingua_esperada = None
+
+    if lingua_esperada and enunciados:
+        lingua_label = {"pt": "Português", "en": "Inglês"}
+        log.info(f"\n  Língua de trabalho: {lingua_trabalho} → a verificar enunciados...")
+        for e in enunciados:
+            lingua_det = _detectar_lingua_pdf(e["pdf_bytes"])
+            if lingua_det is None:
+                log.aviso(f"  ⚠ {e['nome']}: língua não determinada (texto insuficiente)")
+            elif lingua_det != lingua_esperada:
+                log.aviso(f"  ⚠ {e['nome']}: parece estar em {lingua_label.get(lingua_det, lingua_det)}"
+                          f" (esperado: {lingua_label[lingua_esperada]})")
+            else:
+                log.info(f"  ✓ {e['nome']}: {lingua_label[lingua_det]}")
 
     # --- Resultados de Avaliação ---
     resultados_atual = None
