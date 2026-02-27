@@ -297,9 +297,7 @@ def analisar_uc(
         # Verificar aulas sem sumário
         sem_sumario = [s for s in sums if not s["sumario"].strip()]
         if sem_sumario:
-            log.aviso(f"{len(sem_sumario)} aula(s) sem sumário:")
-            for s in sem_sumario:
-                log.aviso(f"  Aula {s['numero']} [{s['data']}] (turma {s['turma']})")
+            log.aviso(f"{len(sem_sumario)} aula(s) sem sumário.")
         else:
             log.info(f"  ✓ Todas as {len(sums)} aulas têm sumário.")
 
