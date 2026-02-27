@@ -941,7 +941,10 @@ def analisar_uc_integrado(
 {ficha.get('formula_classificacao', 'N/A')}
 
 ### Obtenção de Frequência
-{ficha.get('obtencao_frequencia', 'N/A')}""")
+{ficha.get('obtencao_frequencia', 'N/A')}
+
+### Língua de Trabalho
+{ficha.get('lingua_trabalho', 'N/A')}""")
 
     # 2. Sumários das aulas
     linhas_sum = []
@@ -1153,6 +1156,7 @@ com todas as secções delimitadas indicadas no system prompt.\
     funcionamento = _extrair_bloco("===FUNCIONAMENTO===", "===FIM_FUNCIONAMENTO===")
     programa_efetivo = _extrair_bloco("===PROGRAMA_EFETIVO===", "===FIM_PROGRAMA_EFETIVO===")
     enunciados_moodle_bloco = _extrair_bloco("===ENUNCIADOS_MOODLE===", "===FIM_ENUNCIADOS_MOODLE===")
+    lingua_enunciados_bloco = _extrair_bloco("===LINGUA_ENUNCIADOS===", "===FIM_LINGUA_ENUNCIADOS===")
 
     # Fallback: delimitadores sem FIM_ (formato antigo)
     if not resultados:
@@ -1214,6 +1218,7 @@ com todas as secções delimitadas indicadas no system prompt.\
                 funcionamento = _extrair_bloco("===FUNCIONAMENTO===", "===FIM_FUNCIONAMENTO===")
                 programa_efetivo = _extrair_bloco("===PROGRAMA_EFETIVO===", "===FIM_PROGRAMA_EFETIVO===")
                 enunciados_moodle_bloco = _extrair_bloco("===ENUNCIADOS_MOODLE===", "===FIM_ENUNCIADOS_MOODLE===")
+                lingua_enunciados_bloco = _extrair_bloco("===LINGUA_ENUNCIADOS===", "===FIM_LINGUA_ENUNCIADOS===")
         except Exception as e:
             if logger:
                 logger.aviso(f"  Falha ao normalizar resposta sem delimitadores: {e}")
@@ -1253,6 +1258,7 @@ com todas as secções delimitadas indicadas no system prompt.\
         "funcionamento": funcionamento,
         "programa_efetivo": programa_efetivo,
         "enunciados_moodle_bloco": enunciados_moodle_bloco,
+        "lingua_enunciados_bloco": lingua_enunciados_bloco,
         "custo_estimado": custo,
     }
 
