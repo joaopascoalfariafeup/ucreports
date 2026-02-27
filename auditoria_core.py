@@ -14,6 +14,7 @@ from pathlib import Path
 from sigarra import (
     SigarraSession, SIGARRA_BASE, extrair_ficha_uc, extrair_sumarios,
     extrair_resultados_uc, extrair_resultados_curso,
+    extrair_pautas_uc, verificar_estudantes_sem_classificacao,
     extrair_enunciados_avaliacao,
     submeter_enunciados_sigarra,
     inferir_epoca_enunciado,
@@ -429,6 +430,23 @@ def analisar_uc(
         log.aviso(f"Resultados: indisponíveis ({e})")
     except PermissionError as e:
         log.erro(f"Resultados: erro de autenticação ({e})")
+
+    # Verificar classificações pendentes nas pautas
+    log.info("\n  A verificar pautas (classificações pendentes)...")
+    try:
+        pautas = extrair_pautas_uc(oc_id, sessao)
+        if not pautas:
+            log.info("  Sem pautas disponíveis.")
+        for p in pautas:
+            sem = verificar_estudantes_sem_classificacao(p["pauta_id"], sessao)
+            if sem is None:
+                log.aviso(f"  ⚠ {p['epoca']}: não foi possível determinar classificações pendentes")
+            elif sem == 0:
+                log.info(f"  ✓ {p['epoca']}: todos os {p['n_estudantes']} estudantes com classificação final")
+            else:
+                log.aviso(f"  ⚠ {p['epoca']}: {sem} estudante(s) ainda sem classificação final")
+    except Exception as e:
+        log.aviso(f"  Aviso: Não foi possível verificar pautas ({e})")
 
     log.concluir_fase("resultados", resumo_resultados, ok=resultados_ok)
 

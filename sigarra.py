@@ -44,8 +44,8 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 
 # URLs do SIGARRA
 SIGARRA_BASE = "https://sigarra.up.pt/feup/pt"
-SIGARRA_UC_URL = f"{SIGARRA_BASE}/UCURR_GERAL.FICHA_UC_VIEW?pv_ocorrencia_id={{}}"
 SIGARRA_AUTH_URL = f"{SIGARRA_BASE}/mob_val_geral.autentica"
+SIGARRA_UC_URL = f"{SIGARRA_BASE}/UCURR_GERAL.FICHA_UC_VIEW?pv_ocorrencia_id={{}}"
 SIGARRA_SUMARIOS_URL = f"{SIGARRA_BASE}/sumarios_geral.ver?pv_ocorrencia_id={{}}"
 SIGARRA_SUMARIOS_LISTA_URL = f"{SIGARRA_BASE}/sumarios_geral.lista"
 SIGARRA_RELATORIO_UC_URL = f"{SIGARRA_BASE}/ucurr_geral.rel_uc_view?pv_ocorrencia_id={{}}"
@@ -1022,6 +1022,74 @@ def extrair_resultados_uc(ocorrencia_id: str, sessao: SigarraSession) -> dict:
         "resumo": resumo,
         "estatisticas": estatisticas,
     }
+
+
+# ---------------------------------------------------------------------------
+# Verificação de pautas e classificações pendentes
+# ---------------------------------------------------------------------------
+
+def extrair_pautas_uc(ocorrencia_id: str, sessao: SigarraSession) -> list[dict]:
+    """Extrai lista de pautas de época da UC (show_pautas).
+
+    Returns:
+        Lista de dicts com 'pauta_id', 'epoca', 'ano_letivo', 'estado',
+        'data_estado', 'n_estudantes'.
+    """
+    url = f"{SIGARRA_BASE}/lres_geral.show_pautas?pv_ocorr_id={ocorrencia_id}"
+    html = sessao.fetch_html(url)
+    soup = BeautifulSoup(html, "html.parser")
+    pautas = []
+    tabela = soup.find("table", class_="dadossz")
+    if not tabela:
+        return pautas
+    for tr in tabela.find_all("tr")[1:]:
+        tds = tr.find_all("td")
+        if len(tds) < 5:
+            continue
+        link = tr.find("a", href=lambda h: h and "pv_pauta_id=" in h)
+        if not link:
+            continue
+        m = re.search(r'pv_pauta_id=(\d+)', link["href"])
+        if not m:
+            continue
+        pauta_id = m.group(1)
+        try:
+            n_estudantes = int(tds[4].get_text(strip=True))
+        except ValueError:
+            n_estudantes = None
+        pautas.append({
+            "pauta_id": pauta_id,
+            "epoca": tds[0].get_text(strip=True),
+            "ano_letivo": tds[1].get_text(strip=True),
+            "estado": tds[2].get_text(strip=True),
+            "data_estado": tds[3].get_text(strip=True),
+            "n_estudantes": n_estudantes,
+        })
+    return pautas
+
+
+def verificar_estudantes_sem_classificacao(pauta_id: str, sessao: SigarraSession) -> int | None:
+    """Verifica se há estudantes sem classificação final numa pauta.
+
+    Returns:
+        Número de estudantes sem classificação, 0 se todos têm classificação,
+        ou None se não foi possível determinar.
+    """
+    url = f"{SIGARRA_BASE}/lres_geral.show_pauta?pv_pauta_id={pauta_id}&pv_modo=LST"
+    html = sessao.fetch_html(url)
+    soup = BeautifulSoup(html, "html.parser")
+    h3 = soup.find("h3", string=lambda s: s and "sem classificação final" in s.lower())
+    if not h3:
+        return None
+    div_info = h3.find_next_sibling("div", class_="informa")
+    if div_info and "todos os estudantes já estão incluidos em termos" in div_info.get_text().lower():
+        return 0
+    # Contar estudantes na tabela seguinte
+    tabela = h3.find_next_sibling("table")
+    if tabela:
+        linhas = [tr for tr in tabela.find_all("tr") if tr.find("td")]
+        return len(linhas)
+    return None  # secção existe mas estrutura inesperada
 
 
 # ---------------------------------------------------------------------------
