@@ -297,11 +297,11 @@ def analisar_uc(
         # Verificar aulas sem sumário
         sem_sumario = [s for s in sums if not s["sumario"].strip()]
         if sem_sumario:
-            log.aviso(f"\n  ⚠ {len(sem_sumario)} aula(s) sem sumário:")
+            log.aviso(f"{len(sem_sumario)} aula(s) sem sumário:")
             for s in sem_sumario:
-                log.aviso(f"    - Aula {s['numero']} [{s['data']}] (turma {s['turma']})")
+                log.aviso(f"  Aula {s['numero']} [{s['data']}] (turma {s['turma']})")
         else:
-            log.info(f"\n  ✓ Todas as {len(sums)} aulas têm sumário.")
+            log.info(f"  ✓ Todas as {len(sums)} aulas têm sumário.")
 
     # --- Conteúdos do Moodle ---
     conteudos_moodle = None
@@ -434,13 +434,13 @@ def analisar_uc(
 
     if lingua_esperada and enunciados:
         lingua_label = {"pt": "Português", "en": "Inglês"}
-        log.info(f"\n  Língua de trabalho: {lingua_trabalho} → a verificar enunciados...")
+        log.info(f"  Língua de trabalho: {lingua_trabalho} → a verificar enunciados...")
         for e in enunciados:
             lingua_det = _detectar_lingua_pdf(e["pdf_bytes"])
             if lingua_det is None:
-                log.aviso(f"  ⚠ {e['nome']}: língua não determinada (texto insuficiente)")
+                log.aviso(f"{e['nome']}: língua não determinada (texto insuficiente)")
             elif lingua_det != lingua_esperada:
-                log.aviso(f"  ⚠ {e['nome']}: parece estar em {lingua_label.get(lingua_det, lingua_det)}"
+                log.aviso(f"{e['nome']}: parece estar em {lingua_label.get(lingua_det, lingua_det)}"
                           f" (esperado: {lingua_label[lingua_esperada]})")
             else:
                 log.info(f"  ✓ {e['nome']}: {lingua_label[lingua_det]}")
@@ -508,13 +508,13 @@ def analisar_uc(
         for p in pautas:
             sem = verificar_estudantes_sem_classificacao(p["pauta_id"], sessao)
             if sem is None:
-                log.aviso(f"  ⚠ {p['epoca']}: não foi possível determinar classificações pendentes")
+                log.aviso(f"{p['epoca']}: não foi possível determinar classificações pendentes")
             elif sem == 0:
                 log.info(f"  ✓ {p['epoca']}: todos os {p['n_estudantes']} estudantes com classificação final")
             else:
-                log.aviso(f"  ⚠ {p['epoca']}: {sem} estudante(s) ainda sem classificação final")
+                log.aviso(f"{p['epoca']}: {sem} estudante(s) ainda sem classificação final")
     except Exception as e:
-        log.aviso(f"  Aviso: Não foi possível verificar pautas ({e})")
+        log.aviso(f"Não foi possível verificar pautas ({e})")
 
     log.concluir_fase("resultados", resumo_resultados, ok=resultados_ok)
 
