@@ -8,3 +8,4 @@ output/
 .pids
 *.log
 doc/*.pdf
+install.txt

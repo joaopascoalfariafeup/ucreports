@@ -136,11 +136,11 @@ No servidor, instalar cloudflared Linux seguindo as [instruções oficiais](http
 
 ## Privacidade e RGPD
 
-Os dados dos relatórios de UC enviados para análise são processados pelos fornecedores de LLM como subprocessadores, ao abrigo de Acordos de Processamento de Dados (DPA) com Cláusulas Contratuais Padrão (SCC) da UE:
+Os dados dos relatórios de UC enviados para análise são processados pelos fornecedores de LLM como subprocessadores:
 
 - **Anthropic** — [Terms of Service](https://www.anthropic.com/legal/commercial-terms) · [DPA](https://privacy.anthropic.com/pt) · Retenção: 30 dias · Dados não usados para treino
 - **OpenAI** — [API Data Usage](https://openai.com/policies/api-data-usage-policies) · [DPA](https://openai.com/policies/data-processing-addendum) · Retenção: 30 dias · Dados não usados para treino
-- **IAEDU** — Serviço institucional da U.Porto
+- **IAEDU** — Serviço institucional da FCT/FCCN
 
 A aplicação nunca armazena credenciais SIGARRA nem tokens de sessão em base de dados. No caso de autenticação federada (Shibboleth/SAML2), as credenciais são processadas exclusivamente pelo Identity Provider da U.Porto (wayf.up.pt).
 
