@@ -142,7 +142,7 @@ Os dados dos relatórios de UC enviados para análise são processados pelos for
 - **OpenAI** — [API Data Usage](https://openai.com/policies/api-data-usage-policies) · [DPA](https://openai.com/policies/data-processing-addendum) · Retenção: 30 dias · Dados não usados para treino
 - **IAEDU** — Serviço institucional da FCT/FCCN
 
-A aplicação nunca armazena credenciais SIGARRA nem tokens de sessão em base de dados. No caso de autenticação federada (Shibboleth/SAML2), as credenciais são processadas exclusivamente pelo Identity Provider da U.Porto (wayf.up.pt).
+A aplicação nunca armazena credenciais SIGARRA nem tokens de sessão em base de dados. No caso de autenticação federada (Shibboleth/SAML2), as credenciais transitam pelo servidor da aplicação (proxy HTTPS) antes de serem reencaminhadas para o Identity Provider da U.Porto (wayf.up.pt); não são guardadas em disco nem registadas em logs.
 
 ## Licença
 

@@ -1802,12 +1802,13 @@ def privacidade():
           As credenciais não são guardadas em disco nem registadas em logs.
         </li>
         <li>
-          <b>Autenticação federada (Shibboleth/SAML2):</b> as credenciais são submetidas diretamente ao
-          Fornecedor de Identidade da Universidade do Porto (wayf.up.pt), através de um formulário servido
-          por essa infraestrutura. A aplicação nunca recebe nem processa as credenciais — apenas recebe a
-          asserção SAML emitida pelo IdP após autenticação bem-sucedida. Este mecanismo oferece garantias
-          de privacidade adicionais, uma vez que as credenciais do utilizador não passam pelos servidores
-          desta aplicação.
+          <b>Autenticação federada (Shibboleth/SAML2):</b> o fluxo de autenticação é iniciado via
+          Shibboleth/SAML2 com o Fornecedor de Identidade da Universidade do Porto (wayf.up.pt).
+          Por razões técnicas (necessidade de sessão HTTP do lado do servidor para acesso à API SIGARRA),
+          as credenciais introduzidas no formulário do IdP transitam pelo servidor desta aplicação antes
+          de serem reencaminhadas para o IdP — tal como num proxy HTTPS. As credenciais são transmitidas
+          exclusivamente sobre HTTPS, não são guardadas em disco e não são registadas em logs.
+          Apenas a asserção SAML resultante é utilizada para estabelecer a sessão.
         </li>
       </ul>
       <p>
