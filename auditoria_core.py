@@ -294,6 +294,15 @@ def analisar_uc(
                 log.info(f"\n--- Turma {turma_atual} ({s['tipo_aula']}) ---\n")
             log.info(f"  Aula {s['numero']:2d} [{s['data']}]: {s['sumario']}")
 
+        # Verificar aulas sem sumário
+        sem_sumario = [s for s in sums if not s["sumario"].strip()]
+        if sem_sumario:
+            log.aviso(f"\n  ⚠ {len(sem_sumario)} aula(s) sem sumário:")
+            for s in sem_sumario:
+                log.aviso(f"    - Aula {s['numero']} [{s['data']}] (turma {s['turma']})")
+        else:
+            log.info(f"\n  ✓ Todas as {len(sums)} aulas têm sumário.")
+
     # --- Conteúdos do Moodle ---
     conteudos_moodle = None
     moodle_url = ficha.get("moodle_url")
