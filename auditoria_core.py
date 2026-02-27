@@ -564,20 +564,8 @@ def analisar_uc(
             enunciados_moodle_bloco, enunciados, log,
         )
 
-    # Processar verificação de língua dos enunciados (pelo LLM)
-    lingua_enunciados_bloco = resultado_int.get("lingua_enunciados_bloco", "")
-    if lingua_enunciados_bloco:
-        log.info("\n--- Língua dos enunciados (verificação LLM) ---")
-        for linha in lingua_enunciados_bloco.strip().splitlines():
-            linha = linha.strip().lstrip("- ")
-            if not linha:
-                continue
-            if "[DIVERGE]" in linha.upper():
-                log.aviso(linha)
-            else:
-                log.info(f"  ✓ {linha}")
 
-    
+
     # ================================================================
     # FASE 3: Preparação do Relatório (preview + submissão opcional)
     # ================================================================

@@ -48,7 +48,7 @@ Se os dados forem parciais ou insuficientes para uma conclusão robusta, indicar
 - Verificar se existe pelo menos uma componente de avaliação supervisionada individual (prova escrita, discussão oral ou equivalente). A ausência total de avaliação supervisionada individual constitui um problema relevante para a integridade do processo de avaliação.
 - Verificar se os critérios de avaliação dos trabalhos são públicos e detalhados (idealmente sob a forma de rubrica/grelha com parâmetros, pesos e condições por nível de classificação), promovendo transparência e equidade.
 - Se houver enunciados com origem "Moodle/*", classificar cada um como AVALIAÇÃO ou NÃO_AVALIAÇÃO (ver FORMATO DE SAÍDA).
-- Se a língua de trabalho da UC for "Português" ou "Inglês" (não bilingue), verificar se cada enunciado está escrito na língua de trabalho correspondente (ver FORMATO DE SAÍDA — bloco LINGUA_ENUNCIADOS).
+- Se a língua de trabalho da UC for "Português" ou "Inglês" (não bilingue), verificar se os enunciados estão escritos na língua de trabalho correspondente e comentar na análise dos instrumentos de avaliação.
 - Verificar se os enunciados de trabalhos e relatórios incluem ou referenciam uma declaração de honra relativa à autoria e originalidade do trabalho, conforme Art. 8.º do Código de Ética. Esta declaração é distinta (e complementar) da declaração de uso de IA. Quando não observável, indicar que não foram encontradas evidências sem penalizar.
 - Integração de IA na avaliação: verificar se existem evidências de mecanismos de transparência como declaração de uso de ferramentas de IA, ou de natureza similar, nos entregáveis (Art. 7.º n.2 e n.3 c) do Código de Ética da U.Porto) e componentes de avaliação que valorizem processo, justificação e validação crítica, para além do produto final. Quando não observável, indicar que não foram encontradas evidências sem penalizar.
 
@@ -149,25 +149,6 @@ Critérios: classificar como AVALIAÇÃO se o documento é um enunciado de exame
 (Omitir esta secção se não houver enunciados com origem Moodle.)
 ===FIM_ENUNCIADOS_MOODLE===
 
-
-===LINGUA_ENUNCIADOS===
-Secção auxiliar para verificação da língua dos enunciados face à língua de trabalho da UC.
-
-Emitir APENAS se a língua de trabalho da UC for explicitamente "Português" ou "Inglês" (não bilingue/mista) E se existirem enunciados.
-
-Para cada enunciado (independentemente da origem), uma linha no formato:
-- <nome_ficheiro>: <PT|EN|PT/EN|INDETERMINADO> — <justificação breve (1 frase)> [OK | DIVERGE]
-
-Classificar como:
-- PT — documento predominantemente em português
-- EN — documento predominantemente em inglês
-- PT/EN — documento verdadeiramente bilingue (secções em ambas as línguas)
-- INDETERMINADO — impossível determinar (ex.: só imagens, só fórmulas, muito curto)
-
-Marcar [OK] se a língua do enunciado é compatível com a língua de trabalho da UC (incluindo PT/EN), [DIVERGE] se não.
-
-(Omitir esta secção se a língua de trabalho não for determinável ou se não houver enunciados.)
-===FIM_LINGUA_ENUNCIADOS===
 
 
 ===PROGRAMA_EFETIVO===
