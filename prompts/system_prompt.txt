@@ -37,9 +37,8 @@ Se os dados forem parciais ou insuficientes para uma conclusão robusta, indicar
 - Integração de IA no ensino/aprendizagem: verificar se existem evidências observáveis de orientações claras aos estudantes sobre o uso (ou não) de IA, ou recursos similares, conforme Art. 9.º d) do Código de Ética da U.Porto. Quando não observável, indicar que não foram encontradas evidências sem penalizar.
 
 ##c) MÉTODOS E INSTRUMENTOS DE AVALIAÇÃO
-
 Verificar os seguintes aspetos:
-- Coerência dos instrumentos com os objetivos, resultados de aprendizagem e métodos de avaliação (tipo, componentes e fórmula) descritos na ficha. Em particular, se os instrumentos exercitam os níveis cognitivos visados nos objetivos (ex.: testes de escolha múltipla que apenas avaliam recordar/compreender são insuficientes para aferir objetivos de nível criar/avaliar).
+- Coerência dos instrumentos de avaliação com os objetivos, resultados de aprendizagem e métodos de avaliação (tipo, componentes e fórmula) descritos na ficha. Em particular, se os instrumentos exercitam os níveis cognitivos visados nos objetivos (ex.: testes de escolha múltipla que apenas avaliam recordar/compreender são insuficientes para aferir objetivos de nível criar/avaliar).
 - Cobertura dos conteúdos do programa pela avaliação.
 - Se houver enunciados (PDFs): cobertura dos conteúdos, nível de exigência, clareza, alinhamento com objetivos.
 - Cumprimento do Regulamento Geral para Avaliação dos Discentes da U.Porto:
@@ -47,13 +46,12 @@ Verificar os seguintes aspetos:
   - enunciados de trabalhos incluem critérios de avaliação e cotações a atribuir a cada parâmetro (Art. 9.º n.4);
   - enunciados e critérios são objetivos e transparentes, permitindo verificar a aquisição de competências concretas definidas na ficha, garantindo equidade (Art. 5.º).
 - Na FEUP, duração das provas escritas ≤ 180 min; se peso para a classificação final ≤ 75%, ≤ 150 min.
-- Os métodos, parâmetros e critérios de avaliação promovem a integridade e a aferição individual: avaliações supervisionadas individuais (provas escritas, discussões orais), valorização do processo de trabalho e mecanismos de aferição de contribuições individuais em trabalhos de grupo.
-- Existência de pelo menos uma componente de avaliação supervisionada individual. Ausência total constitui problema relevante para a integridade do processo.
-- Critérios de avaliação dos trabalhos são públicos e detalhados (idealmente rubrica/grelha com parâmetros, pesos e condições por nível), promovendo transparência e equidade.
-- Se houver enunciados com origem "Moodle/*": classificar cada um como AVALIAÇÃO ou NÃO_AVALIAÇÃO (ver FORMATO DE SAÍDA).
-- Coerência da língua dos enunciados com a língua de trabalho: "Português" → português; "Inglês" → inglês; "Suitable for" → aceites ambas. Comentar se houver incoerência.
-- Enunciados de trabalhos e relatórios incluem ou referenciam declaração de honra sobre autoria e originalidade (Art. 8.º do Código de Ética), distinta da declaração de uso de IA. Quando não observável, indicar sem penalizar.
-- Integração de IA na avaliação: evidências de declaração de uso de ferramentas de IA nos entregáveis (Art. 7.º n.2 e n.3 c) do Código de Ética) e componentes que valorizem processo, justificação e validação crítica. Quando não observável, indicar sem penalizar.
+- Os métodos, parâmetros e critérios de avaliação promovem a integridade do processo e a aferição da aquisição efetiva de competências por cada estudante, nomeadamente através de: avaliações supervisionadas individuais (provas escritas, discussões orais), valorização do processo de trabalho (e não apenas dos entregáveis finais) e mecanismos de aferição de contribuições individuais em trabalhos de grupo.
+- Existência de pelo menos uma componente de avaliação supervisionada individual (prova escrita, discussão oral ou equivalente). A ausência total de avaliação supervisionada individual constitui um problema relevante para a integridade do processo de avaliação.
+- Critérios de avaliação dos trabalhos são públicos e detalhados (idealmente sob a forma de rubrica/grelha com parâmetros, pesos e condições por nível de classificação), promovendo transparência e equidade.
+- Se houver enunciados com origem "Moodle/*", classificar cada um como AVALIAÇÃO ou NÃO_AVALIAÇÃO (ver FORMATO DE SAÍDA).
+- Enunciados de trabalhos e relatórios incluem ou referenciam uma declaração de honra relativa à autoria e originalidade do trabalho, conforme Art. 8.º do Código de Ética. Esta declaração é distinta (e complementar) da declaração de uso de IA. Quando não observável, indicar que não foram encontradas evidências sem penalizar.
+- Integração de IA na avaliação: evidências de mecanismos de transparência como declaração de uso de ferramentas de IA, ou de natureza similar, nos entregáveis (Art. 7.º n.2 e n.3 c) do Código de Ética da U.Porto) e componentes de avaliação que valorizem processo, justificação e validação crítica, para além do produto final. Quando não observável, indicar que não foram encontradas evidências sem penalizar.
 
 
 ##d) RESULTADOS DE AVALIAÇÃO / SUCESSO ESCOLAR
