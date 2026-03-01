@@ -263,67 +263,10 @@ def _llm_model_options_map() -> dict[str, list[str]]:
     return out
 
 
-def _llm_pricing_map() -> dict[str, tuple[float, float]]:
-    """Lê preços por modelo (USD por 1M tokens in/out), se configurados."""
-    payload = os.environ.get("LLM_PRICING_JSON", "").strip()
-    pricing_file = os.environ.get("LLM_PRICING_FILE", "").strip()
-    if not payload and pricing_file:
-        try:
-            payload = Path(pricing_file).read_text(encoding="utf-8")
-        except OSError:
-            payload = ""
-
-    if not payload:
-        return {}
-
-    try:
-        raw = json.loads(payload)
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(raw, dict):
-        return {}
-
-    out: dict[str, tuple[float, float]] = {}
-    for modelo, val in raw.items():
-        try:
-            if isinstance(val, dict):
-                in_v = float(val.get("input", 0))
-                out_v = float(val.get("output", 0))
-            else:
-                in_v, out_v = float(val[0]), float(val[1])
-            out[str(modelo).strip()] = (in_v, out_v)
-        except (TypeError, ValueError, IndexError):
-            continue
-    return out
-
-
-_BUILTIN_PRICING: dict[str, tuple[float, float]] = {
-    # Anthropic (USD / 1M tokens input, output) — fonte: platform.claude.com/docs/en/about-claude/pricing
-    "claude-opus-4-6":    (5.0,  25.0),
-    "claude-opus-4-5":    (5.0,  25.0),
-    "claude-sonnet-4-6":  (3.0,  15.0),
-    "claude-sonnet-4-5":  (3.0,  15.0),
-    "claude-haiku-4-5":   (1.0,   5.0),
-    # OpenAI
-    "gpt-4o":             (2.5,  10.0),
-    "gpt-4o-mini":        (0.15,  0.6),
-    "o3-mini":            (1.1,   4.4),
-}
-
-
-def _format_model_cost(provider: str, modelo: str, pricing: dict[str, tuple[float, float]]) -> str:
-    """Devolve indicação de custo ou gratuitidade para mostrar na UI."""
-    p = (provider or "").strip().lower()
-    if p == "iaedu":
+def _format_model_cost(provider: str) -> str:
+    """Devolve indicação de gratuitidade para mostrar na UI (apenas iaedu)."""
+    if (provider or "").strip().lower() == "iaedu":
         return " — gratuito"
-    m = (modelo or "").strip()
-    # Preço configurado explicitamente tem prioridade; fallback para builtin; None = desconhecido
-    price = pricing.get(m) if m in pricing else _BUILTIN_PRICING.get(m)
-    if price is None:
-        return " — custo variável"
-    in_p, out_p = price
-    if in_p or out_p:
-        return f" — ~${in_p:.2g}/${out_p:.2g} /1M tokens"
     return ""
 
 
@@ -2235,13 +2178,12 @@ def ucs():
         if provider_default not in provider_opts and provider_opts:
             provider_default = provider_opts[0]
 
-        pricing_map = _llm_pricing_map()
         llm_choices: list[dict[str, str]] = []
         for p in provider_opts:
             modelos = model_map.get(p) or [_default_modelo_por_provider(p)]
             for m in modelos:
                 val = f"{p}::{m}"
-                label = f"{p} / {m}{_format_model_cost(p, m, pricing_map)}"
+                label = f"{p} / {m}{_format_model_cost(p)}"
                 llm_choices.append({"provider": p, "modelo": m, "value": val, "label": label})
 
         # Default da combobox:
