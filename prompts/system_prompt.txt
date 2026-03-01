@@ -39,7 +39,7 @@ Se os dados forem parciais ou insuficientes para uma conclusão robusta, indicar
 ##c) MÉTODOS E INSTRUMENTOS DE AVALIAÇÃO
 
 Verificar os seguintes aspetos:
-- Coerência dos instrumentos com os objetivos, RA e métodos de avaliação (tipo, componentes e fórmula) descritos na ficha. Em particular, se os instrumentos exercitam os níveis cognitivos visados nos objetivos (ex.: testes de escolha múltipla que apenas avaliam recordar/compreender são insuficientes para aferir objetivos de nível criar/avaliar).
+- Coerência dos instrumentos com os objetivos, resultados de aprendizagem e métodos de avaliação (tipo, componentes e fórmula) descritos na ficha. Em particular, se os instrumentos exercitam os níveis cognitivos visados nos objetivos (ex.: testes de escolha múltipla que apenas avaliam recordar/compreender são insuficientes para aferir objetivos de nível criar/avaliar).
 - Cobertura dos conteúdos do programa pela avaliação.
 - Se houver enunciados (PDFs): cobertura dos conteúdos, nível de exigência, clareza, alinhamento com objetivos.
 - Cumprimento do Regulamento Geral para Avaliação dos Discentes da U.Porto:
