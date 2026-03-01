@@ -1036,9 +1036,11 @@ def _inline_images_moodle(html: str, sessao: SigarraSession) -> str:
 
 @dataclass
 class QuizMeta:
-    summative_value: Optional[int]   # 0,1,2 ou None
-    is_summative: Optional[bool]     # True/False/None
-    quizpassword: Optional[str]      # pode vir None/''
+    summative_value: Optional[int]    # 0,1,2 ou None
+    is_summative: Optional[bool]      # True/False/None
+    quizpassword: Optional[str]       # pode vir None/''
+    intro_html: Optional[str] = None  # cabeçalho/intro do quiz (HTML limpo)
+    timelimit_segundos: Optional[int] = None  # duração em segundos (None = sem limite)
 
 def parse_modedit_quiz_meta(html: str) -> QuizMeta:
     soup = BeautifulSoup(html, "html.parser")
@@ -1070,10 +1072,39 @@ def parse_modedit_quiz_meta(html: str) -> QuizMeta:
         if m:
             quizpassword = m.group(1)
 
+    # 3) Intro / cabeçalho: textarea name="introeditor[text]"
+    intro_html = None
+    ta = soup.select_one('textarea[name="introeditor[text]"]')
+    if ta:
+        raw = (ta.string or "").strip()
+        if raw:
+            raw = re.sub(r'\s+style="[^"]*mso-[^"]*"', '', raw, flags=re.IGNORECASE)
+            raw = re.sub(r'\sclass="Mso[^"]*"', '', raw, flags=re.IGNORECASE)
+            raw = re.sub(r'\s*lang="[^"]*"', '', raw, flags=re.IGNORECASE)
+            raw = re.sub(r'</?o:p[^>]*>', '', raw, flags=re.IGNORECASE)
+            raw = re.sub(r'<p[^>]*>\s*</p>', '', raw, flags=re.DOTALL | re.IGNORECASE)
+            intro_html = raw.strip() or None
+
+    # 4) Duração: timelimit[number] * timelimit[timeunit]
+    timelimit_segundos = None
+    tl_n = soup.select_one('input[name="timelimit[number]"]')
+    tl_u = soup.select_one('select[name="timelimit[timeunit]"]')
+    if tl_n and tl_u:
+        try:
+            n = int(tl_n.get("value", 0) or 0)
+            selected = tl_u.select_one("option[selected]")
+            unit = int(selected.get("value", 0)) if selected else 0
+            if n > 0 and unit > 0:
+                timelimit_segundos = n * unit
+        except (ValueError, TypeError):
+            pass
+
     return QuizMeta(
         summative_value=summative_value,
         is_summative=is_summative,
-        quizpassword=quizpassword
+        quizpassword=quizpassword,
+        intro_html=intro_html,
+        timelimit_segundos=timelimit_segundos,
     )
 
 def obter_quiz_meta(
@@ -1129,7 +1160,23 @@ def _remover_feedback_bs4(html: str) -> str:
 
     return str(soup)
 
-def _limpar_html_quiz(html: str, nome_quiz: str, nome_uc: str = "") -> str:
+def _formatar_duracao(seg: int) -> str:
+    """Formata duração em segundos para string legível (ex: '2h', '1h 30min', '45 min')."""
+    if seg <= 0:
+        return ""
+    h = seg // 3600
+    m = (seg % 3600) // 60
+    if h and m:
+        return f"{h}h {m}min"
+    if h:
+        return f"{h}h"
+    if m:
+        return f"{m} min"
+    return f"{seg}s"
+
+
+def _limpar_html_quiz(html: str, nome_quiz: str, nome_uc: str = "",
+                      intro_html: str = "", timelimit_segundos: Optional[int] = None) -> str:
     """Extrai conteúdo das perguntas e devolve HTML limpo para conversão PDF.
 
     Remove chrome do Moodle (flag icons, botões de edição, estado de resposta,
@@ -1492,6 +1539,8 @@ pre, code {{ font-size: 10pt; background: #f5f5f5; padding: 2px 4px; }}
 <body>
 {f'<p style="font-size:13pt;margin:0 0 0.2em 0">{html_mod.escape(nome_uc)}</p>' if nome_uc else ''}
 <h1>{html_mod.escape(nome_quiz)}</h1>
+{f'<p style="font-size:10pt;color:#555;margin:0 0 0.4em 0">Duração: {_formatar_duracao(timelimit_segundos)}</p>' if timelimit_segundos else ''}
+{f'<div style="margin-bottom:0.8em">{intro_html}</div>' if intro_html else ''}
 {conteudo}
 </body>
 </html>"""
@@ -1587,7 +1636,9 @@ def extrair_quiz_moodle(
         )
         log.debug(f"      Quiz meta: summative={meta.summative_value}, "
                 f"is_summative={meta.is_summative}, "
-                f"password={'set' if meta.quizpassword else 'not set'}")
+                f"password={'set' if meta.quizpassword else 'not set'}, "
+                f"timelimit={meta.timelimit_segundos}s, "
+                f"intro={'yes' if meta.intro_html else 'no'}")
         if meta.is_summative is False and ignorar_formativo:
             log.debug(f"      Quiz formativo ignorado {cmid}")
             return None
@@ -1694,7 +1745,11 @@ def extrair_quiz_moodle(
     nome_uc_view = _m_uc.group(1).strip() if _m_uc else ""
 
     # 10. Limpar HTML
-    html_limpo = _limpar_html_quiz(html_review, nome_quiz, nome_uc=nome_uc_view)
+    html_limpo = _limpar_html_quiz(
+        html_review, nome_quiz, nome_uc=nome_uc_view,
+        intro_html=meta.intro_html or "",
+        timelimit_segundos=meta.timelimit_segundos,
+    )
 
     # Debug: guardar HTML limpo para inspeção (apenas V>=2)
     if verbosidade >= 2:
@@ -1720,9 +1775,10 @@ def extrair_quiz_moodle(
 
     # 12. Construir dict de enunciado
     nome_ficheiro = re.sub(r'[<>:"/\\|?*]', '_', nome_quiz) + ".pdf"
+    duracao_label = f" ({_formatar_duracao(meta.timelimit_segundos)})" if meta.timelimit_segundos else ""
     return {
         "nome": nome_ficheiro,
-        "descricao": f"Moodle: {nome_quiz}",
+        "descricao": f"Moodle: {nome_quiz}{duracao_label}",
         "epoca": "",
         "data": "",
         "url": quiz_url,
@@ -1760,23 +1816,23 @@ def _tokens(text: str) -> Set[str]:
 
 # --- Listas de palavras (tokens) ---
 
-# Palavras que indicam avaliação (como tokens isolados)
+# Palavras que indicam avaliação (normalizadas em minúsculas e sem acentos) 
+# — se nenhuma for encontrada, descartamos como não avaliação.
 _AVALIACAO_TOKENS = {
     # PT
     "exame", "teste", "questionário", "trabalho", "projeto", "prova", "avaliacao", 
     "frequencia", "exercicio", "exercicios", "laboratorio",
 
     # EN
-    "exam", "test", "quiz", "assignment", "project", "assessment",
+    "exam", "test", "quiz", "assignment", "project", "assessment", "evaluation",
     "midterm", "homework", "exercise", "exercises", "lab",
 }
 
-# Palavras que normalmente significam "não é avaliação" (materiais, correções, exemplos, etc.)
-# Nota: NÃO incluímos "form" nem "grade/marks" por serem muito ambíguas em substring/semântica.
+# Palavras que normalmente significam "não é avaliação" 
 _EXCLUIR_TOKENS = {
     # PT
-    "solucao", "solucoes", "correcao", "resposta", "respostas",
-    "classificacao", "classificacoes", "notas",
+    "solucao", "solucoes", "correcao", "correcoes", "resposta", "respostas",
+    "classificacao", "classificacoes", "notas", "pontuacao", "pontuacoes",
     "apresentacao", "apresentacoes", "aula", "palestra", 
     "slide", "slides", "leitura", "material", "pratica",
     "submissao", "submissoes", "entrega", "entregas",
@@ -1785,9 +1841,9 @@ _EXCLUIR_TOKENS = {
     # EN
     "solution", "solutions", "correction", "corrections", "answer", "answers",
     "grading", "grade", "grades", "marks",
-    "presentation", "presentations", "lecture", 
+    "presentation", "presentations", "lecture", "talk",
     "handout", "handouts", "reading", "material", "materials",
-    "submissions", "deliverables",
+    "submission", "submissions", "deliverables",
     "sample", "samples", "example", "examples",
 }
 
