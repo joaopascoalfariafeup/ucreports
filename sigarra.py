@@ -1720,11 +1720,11 @@ def calcular_horas_relatorio(
 
         semanas_calendario = len(semanas_info)
 
-        # Detetar semanas sem aula efetiva
+        # Detetar semanas sem aula efetiva (canceladas ou sem sumário preenchido)
         semanas_nao_realizadas = 0
         for _chave, sums_semana in semanas_info.items():
             if all(
-                _RE_AULA_NAO_REALIZADA.search(s["sumario"])
+                not s["sumario"].strip() or _RE_AULA_NAO_REALIZADA.search(s["sumario"])
                 for s in sums_semana
             ):
                 semanas_nao_realizadas += 1
