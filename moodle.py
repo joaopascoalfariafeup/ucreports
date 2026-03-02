@@ -1610,6 +1610,20 @@ def _limpar_html_pagina(html: str, nome_pagina: str, nome_uc: str = "") -> str:
         r'<\1\2\3>', conteudo, flags=re.IGNORECASE,
     )
 
+    # 6. Reduzir espaçamento excessivo no conteúdo
+    # Remover <p>/<div> completamente vazios (só whitespace ou &nbsp;)
+    conteudo = re.sub(
+        r'<(p|div)[^>]*>\s*(&nbsp;|\u00a0)?\s*</\1>',
+        '', conteudo, flags=re.IGNORECASE,
+    )
+    # Colapsar 3+ <br> consecutivos para 1
+    conteudo = re.sub(
+        r'(<br\s*/?>\s*){3,}', '<br/>', conteudo, flags=re.IGNORECASE,
+    )
+    # Remover inline styles com margin/padding (conflituam com CSS da template)
+    conteudo = re.sub(
+        r'\bstyle="[^"]*(?:margin|padding)[^"]*"', '', conteudo, flags=re.IGNORECASE,
+    )
     conteudo = re.sub(r'(\s*\n){3,}', '\n\n', conteudo)
 
     return f"""<!DOCTYPE html>
@@ -1618,23 +1632,25 @@ def _limpar_html_pagina(html: str, nome_pagina: str, nome_uc: str = "") -> str:
 <meta charset="utf-8">
 <title>{html_mod.escape(nome_pagina)}</title>
 <style>
-body {{ font-family: Arial, Helvetica, sans-serif; font-size: 11pt;
-       margin: 2cm; line-height: 1.3; }}
-h1 {{ font-size: 14pt; margin: 0 0 0.5em 0; }}
-h2 {{ font-size: 12pt; }}
-h3 {{ font-size: 11pt; }}
-p {{ margin: 0.3em 0; }}
+@page {{ margin: 1.8cm 2cm; }}
+body {{ font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.2; }}
+h1 {{ font-size: 13pt; margin: 0 0 0.4em 0; }}
+h2 {{ font-size: 11pt; margin: 0.4em 0 0.15em 0; }}
+h3 {{ font-size: 10.5pt; margin: 0.3em 0 0.1em 0; }}
+p {{ margin: 0; padding: 0; }}
+ul, ol {{ margin: 0.2em 0 0.2em 1.5em; padding: 0; }}
+li {{ margin: 0.1em 0; }}
 table {{ border-collapse: collapse; width: 100%; font-size: 9pt; }}
-td, th {{ border: 1px solid #999; padding: 4px 8px; }}
-pre, code {{ font-size: 10pt; background: #f5f5f5; padding: 2px 4px; }}
-hr {{ border: none; border-top: 1px solid #ccc; margin: 0.5em 0; }}
+td, th {{ border: 1px solid #999; padding: 3px 6px; }}
+pre, code {{ font-size: 9.5pt; background: #f5f5f5; padding: 2px 4px; }}
+hr {{ border: none; border-top: 1px solid #ccc; margin: 0.4em 0; }}
 img {{ width: auto; height: auto; }}
 </style>
 </head>
 <body>
-{f'<p style="font-size:10pt;color:#777;margin:0 0 0.2em 0">{html_mod.escape(nome_uc)}</p>' if nome_uc else ''}
+{f'<p style="font-size:9pt;color:#777;margin:0">{html_mod.escape(nome_uc)}</p>' if nome_uc else ''}
 <h1>{html_mod.escape(nome_pagina)}</h1>
-<hr style="margin-bottom:0.8em"/>
+<hr/>
 {conteudo}
 </body>
 </html>"""
@@ -1971,7 +1987,7 @@ _EXCLUIR_TOKENS = {
     # PT
     "solucao", "solucoes", "correcao", "correcoes", "resposta", "respostas",
     "classificacao", "classificacoes", "notas", "pontuacao", "pontuacoes",
-    "apresentacao", "apresentacoes", "aula", "palestra", 
+     "aula", "palestra", 
     "slide", "slides", "leitura", "material", "pratica",
     "submissao", "submissoes", "entrega", "entregas",
     "exemplo", "exemplos", 
@@ -1979,7 +1995,7 @@ _EXCLUIR_TOKENS = {
     # EN
     "solution", "solutions", "correction", "corrections", "answer", "answers",
     "grading", "grade", "grades", "marks",
-    "presentation", "presentations", "lecture", "talk",
+     "lecture", "talk",
     "handout", "handouts", "reading", "material", "materials",
     "submission", "submissions", "deliverables",
     "sample", "samples", "example", "examples",
