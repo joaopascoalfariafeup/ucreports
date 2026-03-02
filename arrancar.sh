@@ -64,6 +64,9 @@ else
   CF_CONFIG_WIN="${HOME}/.cloudflared/config.yml"
 fi
 
+# --- limpar flag de drain (se ficou de deploy anterior) ---
+rm -f "$ROOT/.draining"
+
 # --- verificacoes ---
 if [[ ! -f "$ROOT/app_web.py" ]]; then
   echo "[ERRO] app_web.py nao encontrado em $ROOT" >&2

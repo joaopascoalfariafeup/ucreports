@@ -2323,12 +2323,24 @@ def _run_job(job: Tarefa, sess: SigarraSession, verbosidade: int) -> None:
         job.done = True
 
 
+_DRAINING_FILE = _SCRIPT_DIR / ".draining"
+
+
 @app.post("/start")
 def start_job():
     _require_csrf()
     sess = _get_sigarra_session()
     if not sess:
         return redirect(url_for("login"))
+
+    if _DRAINING_FILE.exists():
+        return _page("Manutenção", f"""
+        <div class="card">
+          <p class="status-err"><b>Servidor em manutenção.</b>
+          Não é possível iniciar novas análises neste momento.</p>
+          <p class="muted">O servidor será reiniciado em breve. Tente novamente dentro de alguns minutos.</p>
+          <p><a class="btn btn-secondary" href="{url_for('ucs')}">Voltar à seleção</a></p>
+        </div>"""), 503
 
     oc_id = request.form.get("ocorrencia_id", "").strip()
     uc_nome = request.form.get("uc_nome", "").strip()

@@ -1,0 +1,41 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_PORT || 22 }}
+          script: |
+            set -e
+            cd ~/ucreports
+
+            # 1. Activar drain — novas análises são recusadas com aviso de manutenção
+            touch .draining
+            echo "[deploy] Drain activado."
+
+            # 2. Aguardar jobs em curso (máx. 10 min, verifica a cada 30 s)
+            echo "[deploy] A aguardar jobs em curso..."
+            for i in $(seq 1 20); do
+              # Ficheiros de log modificados após activação do drain indicam jobs ativos
+              ACTIVE=$(find output -maxdepth 3 -name "*.log" -newer .draining 2>/dev/null | wc -l)
+              [ "$ACTIVE" -eq 0 ] && break
+              echo "[deploy]   $ACTIVE log(s) ativo(s), a aguardar... ($((i * 30))s)"
+              sleep 30
+            done
+
+            # 3. Pull e reinício (arrancar.sh remove .draining automaticamente)
+            git pull
+            sudo systemctl restart ucreports
+            echo "[deploy] Deploy concluído."

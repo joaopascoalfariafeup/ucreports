@@ -1,0 +1,15 @@
+[Unit]
+Description=UCReports Auto-Deployer
+After=ucreports.service
+Requires=network-online.target
+
+[Service]
+Type=simple
+User=coursemonitoring
+WorkingDirectory=/home/coursemonitoring/ucreports
+ExecStart=/home/coursemonitoring/ucreports/deployer.sh 60
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
