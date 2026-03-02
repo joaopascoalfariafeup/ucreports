@@ -3,6 +3,7 @@ name: Deploy to VM
 on:
   push:
     branches: [main]
+  workflow_dispatch:  # permite disparo manual no GitHub → Actions → Deploy to VM → Run workflow
 
 jobs:
   deploy:
