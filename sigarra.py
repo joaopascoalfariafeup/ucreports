@@ -64,31 +64,34 @@ SIGARRA_UPLOAD_SANDBOX_URL = f"{SIGARRA_BASE}/gdoc_geral.upload_to_sandbox"
 _ENV_LOADED = False
 
 def load_env():
-    """Carrega variáveis do ficheiro .env local (se existir) para os.environ.
+    """Carrega variáveis de .env (segredos) e .env.public (config pública) para os.environ.
 
-    Só carrega variáveis que ainda não estejam definidas no ambiente,
-    para que variáveis de ambiente reais tenham sempre prioridade.
+    Prioridade: variáveis de sistema > .env > .env.public
+    Só define variáveis que ainda não estejam no ambiente, para que
+    variáveis de sistema reais tenham sempre a precedência mais alta.
     """
 
     global _ENV_LOADED
     if _ENV_LOADED:
         return
 
-    env_path = _SCRIPT_DIR / ".env"
-    if not env_path.is_file():
-        return
-    for line in env_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
-            value = value[1:-1]
-        os.environ.setdefault(key, value)
+    def _carregar(path: "Path"):
+        if not path.is_file():
+            return
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                value = value[1:-1]
+            os.environ.setdefault(key, value)
+
+    # Carregar por ordem decrescente de prioridade (setdefault: primeiro vence)
+    _carregar(_SCRIPT_DIR / ".env")         # segredos — maior prioridade
+    _carregar(_SCRIPT_DIR / ".env.public")  # configuração pública — valores por omissão
 
     _ENV_LOADED = True
 

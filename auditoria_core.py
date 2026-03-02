@@ -337,7 +337,7 @@ def analisar_uc(
     if conteudos_moodle:
         log.info(f"  A extrair enunciados do Moodle...")
         try:
-            enunciados_moodle = extrair_enunciados_moodle(conteudos_moodle, sessao, log._verbosidade, output_dir=pasta_uc, log=log)
+            enunciados_moodle = extrair_enunciados_moodle(conteudos_moodle, sessao, log._verbosidade, output_dir=pasta_uc, log=log, nome_uc=ficha.get("nome_uc", ""), ano_letivo=ficha.get("ano_letivo", ""))
             if enunciados_moodle:
                 n_moodle = len(enunciados_moodle)
                 enunciados.extend(enunciados_moodle)
@@ -436,7 +436,7 @@ def analisar_uc(
     except ValueError as e:
         log.aviso(f"Resultados: indisponíveis ({e})")
     except PermissionError as e:
-        log.erro(f"Resultados: erro de autenticação ({e})")
+        log.erro(f"Resultados: indisponíveis ({e})")
 
     # Verificar classificações pendentes nas pautas
     log.info("\n  A verificar pautas (classificações pendentes)...")
@@ -506,7 +506,7 @@ def analisar_uc(
     except ValueError as e:
         resumo_inqueritos = f"Inquéritos: indisponíveis"
     except PermissionError as e:
-        resumo_inqueritos = f"Inquéritos: erro de autenticação ({e})"
+        resumo_inqueritos = f"Inquéritos: indisponíveis"
 
     log.concluir_fase("inquerito", resumo_inqueritos, ok=inqueritos_ok)
 

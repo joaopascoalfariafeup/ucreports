@@ -1546,7 +1546,7 @@ pre, code {{ font-size: 10pt; background: #f5f5f5; padding: 2px 4px; }}
 </html>"""
 
 
-def _limpar_html_pagina(html: str, nome_pagina: str, nome_uc: str = "") -> str:
+def _limpar_html_pagina(html: str, nome_pagina: str, nome_uc: str = "", ano_letivo: str = "") -> str:
     """Extrai o conteúdo de uma página Moodle (mod/page) e devolve HTML limpo para PDF."""
 
     # 1. Remover scripts, styles, event handlers
@@ -1648,7 +1648,7 @@ img {{ width: auto; height: auto; }}
 </style>
 </head>
 <body>
-{f'<p style="font-size:9pt;color:#777;margin:0">{html_mod.escape(nome_uc)}</p>' if nome_uc else ''}
+{f'<p style="font-size:9pt;color:#777;margin:0">{html_mod.escape(nome_uc)}{f" — {html_mod.escape(ano_letivo)}" if ano_letivo else ""}</p>' if (nome_uc or ano_letivo) else ''}
 <h1>{html_mod.escape(nome_pagina)}</h1>
 <hr/>
 {conteudo}
@@ -1661,6 +1661,7 @@ def _extrair_pagina_moodle(
     nome: str,
     sessao: "SigarraSession",
     nome_uc: str = "",
+    ano_letivo: str = "",
     log: "AuditoriaLogger" = None,
 ) -> dict | None:
     """Extrai uma página Moodle (mod/page/view.php) como PDF.
@@ -1680,7 +1681,7 @@ def _extrair_pagina_moodle(
         log.aviso(f"      Erro ao aceder à página: {e}")
         return None
 
-    html_limpo = _limpar_html_pagina(html_pagina, nome, nome_uc=nome_uc)
+    html_limpo = _limpar_html_pagina(html_pagina, nome, nome_uc=nome_uc, ano_letivo=ano_letivo)
     pdf_bytes = _html_para_pdf(html_limpo, nome, log)
 
     if not pdf_bytes:
@@ -2026,9 +2027,11 @@ def _e_atividade_avaliacao(nome: str, tipo: str) -> bool:
 def extrair_enunciados_moodle(
     conteudos_moodle: dict,
     sessao: SigarraSession,
-    verbosidade: int ,
+    verbosidade: int,
     output_dir: "Path | None",
-    log: AuditoriaLogger
+    log: AuditoriaLogger,
+    nome_uc: str = "",
+    ano_letivo: str = "",
 ) -> list[dict]:
     """Extrai enunciados de avaliação do Moodle (trabalhos, recursos e links).
 
@@ -2107,7 +2110,7 @@ def extrair_enunciados_moodle(
                 log.info(f"      -> Nenhum PDF encontrado na página do assignment")
 
         elif tipo == "page":
-            resultado = _extrair_pagina_moodle(url, nome, sessao, log=log)
+            resultado = _extrair_pagina_moodle(url, nome, sessao, nome_uc=nome_uc, ano_letivo=ano_letivo, log=log)
             if resultado:
                 enunciados.append(resultado)
 
