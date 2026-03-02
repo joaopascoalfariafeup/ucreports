@@ -1820,6 +1820,11 @@ def privacidade():
         {WEB_OUTPUT_RETENTION_HOURS:.3g} hora(s) de retenção configurado no servidor.
       </p>
 
+      <p class="muted">
+        O código-fonte desta ferramenta é público e auditável em
+        <a href="https://github.com/joaopascoalfariafeup/ucreports" target="_blank" rel="noopener">github.com/joaopascoalfariafeup/ucreports</a>.
+      </p>
+
       <p class="muted"><a href="{url_for('login')}">Voltar ao login</a></p>
     </div>
     """
