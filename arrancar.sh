@@ -96,8 +96,9 @@ if [[ $SEM_TUNNEL -eq 0 ]]; then
   fi
 fi
 
-# --- ler configuracao do .env ---
-WEB_THREADS=$(grep -m1 '^WEB_THREADS=' "$ROOT/.env" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
+# --- ler configuracao (.env tem precedencia sobre .env.public) ---
+_env_threads=$(grep -h -m1 '^WEB_THREADS=' "$ROOT/.env" "$ROOT/.env.public" 2>/dev/null || true)
+WEB_THREADS=$(echo "$_env_threads" | cut -d= -f2 | tr -d '[:space:]')
 WEB_THREADS=${WEB_THREADS:-8}
 
 # --- arrancar servidor web ---
