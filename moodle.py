@@ -1546,6 +1546,144 @@ pre, code {{ font-size: 10pt; background: #f5f5f5; padding: 2px 4px; }}
 </html>"""
 
 
+def _limpar_html_pagina(html: str, nome_pagina: str, nome_uc: str = "") -> str:
+    """Extrai o conteúdo de uma página Moodle (mod/page) e devolve HTML limpo para PDF."""
+
+    # 1. Remover scripts, styles, event handlers
+    html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r'<noscript[^>]*>.*?</noscript>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r'\s+on\w+="[^"]*"', '', html)
+
+    # 2. MS Word cleanup
+    html = re.sub(r'\sstyle="[^"]*mso-[^"]*"', '', html, flags=re.IGNORECASE)
+    html = re.sub(r'\sclass="Mso[^"]*"', '', html, flags=re.IGNORECASE)
+    html = re.sub(r'</?o:p[^>]*>', '', html, flags=re.IGNORECASE)
+
+    # 3. Extrair conteúdo principal com BeautifulSoup (lida corretamente com divs aninhadas)
+    conteudo = ""
+    try:
+        soup = BeautifulSoup(html, "html.parser")
+        # Moodle page: conteúdo na div.box.generalbox (mais específico)
+        box = soup.find("div", class_=lambda c: c and "box" in c and "generalbox" in c)
+        if box:
+            conteudo = str(box)
+        else:
+            # Fallback: role="main"
+            main = soup.find(attrs={"role": "main"})
+            if main:
+                # Remover footer/aside dentro do main
+                for tag in main.find_all(["footer", "aside"]):
+                    tag.decompose()
+                conteudo = str(main)
+            else:
+                body = soup.find("body")
+                conteudo = str(body) if body else html
+    except Exception:
+        # Se BeautifulSoup falhar, usar regex simples
+        m = re.search(r'<body[^>]*>(.*?)</body>', html, re.DOTALL | re.IGNORECASE)
+        conteudo = m.group(1).strip() if m else html
+
+    # 4. Escalar imagens (xhtml2pdf não suporta max-width)
+    _IMG_MAX_PX = 640
+
+    def _escalar_img(m):
+        tag = m.group(0)
+        w_attr = re.search(r'\bwidth\s*=\s*"(\d+)', tag)
+        w_style = re.search(r'width\s*:\s*(\d+)', tag)
+        w = int(w_attr.group(1)) if w_attr else (int(w_style.group(1)) if w_style else 0)
+        if w > _IMG_MAX_PX or w == 0:
+            tag = re.sub(r'\s*(?:width|height)\s*=\s*"[^"]*"', '', tag)
+            tag = re.sub(r'\s*style="[^"]*"', '', tag)
+            tag = tag.replace('<img', f'<img width="{_IMG_MAX_PX}"', 1)
+        return tag
+
+    conteudo = re.sub(r'<img\b[^>]*/?>', _escalar_img, conteudo, flags=re.IGNORECASE)
+
+    # 5. Corrigir tipos de listas incompatíveis com xhtml2pdf
+    conteudo = re.sub(
+        r'(<ul\b[^>]*\btype=["\'])disc(["\'])', r'\1disk\2',
+        conteudo, flags=re.IGNORECASE,
+    )
+    conteudo = re.sub(
+        r'<(ul|ol)\b([^>]*?)\btype=["\'](?!circle|disk|square)[^"\']*["\']([^>]*)>',
+        r'<\1\2\3>', conteudo, flags=re.IGNORECASE,
+    )
+
+    conteudo = re.sub(r'(\s*\n){3,}', '\n\n', conteudo)
+
+    return f"""<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>{html_mod.escape(nome_pagina)}</title>
+<style>
+body {{ font-family: Arial, Helvetica, sans-serif; font-size: 11pt;
+       margin: 2cm; line-height: 1.3; }}
+h1 {{ font-size: 14pt; margin: 0 0 0.5em 0; }}
+h2 {{ font-size: 12pt; }}
+h3 {{ font-size: 11pt; }}
+p {{ margin: 0.3em 0; }}
+table {{ border-collapse: collapse; width: 100%; font-size: 9pt; }}
+td, th {{ border: 1px solid #999; padding: 4px 8px; }}
+pre, code {{ font-size: 10pt; background: #f5f5f5; padding: 2px 4px; }}
+hr {{ border: none; border-top: 1px solid #ccc; margin: 0.5em 0; }}
+img {{ width: auto; height: auto; }}
+</style>
+</head>
+<body>
+{f'<p style="font-size:10pt;color:#777;margin:0 0 0.2em 0">{html_mod.escape(nome_uc)}</p>' if nome_uc else ''}
+<h1>{html_mod.escape(nome_pagina)}</h1>
+<hr style="margin-bottom:0.8em"/>
+{conteudo}
+</body>
+</html>"""
+
+
+def _extrair_pagina_moodle(
+    url: str,
+    nome: str,
+    sessao: "SigarraSession",
+    nome_uc: str = "",
+    log: "AuditoriaLogger" = None,
+) -> dict | None:
+    """Extrai uma página Moodle (mod/page/view.php) como PDF.
+
+    Returns:
+        Dict standard de enunciado (com ``pdf_bytes``) ou None.
+    """
+    log.info(f"    [page] {nome}")
+    log.info(f"      URL: {url}")
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        resp = sessao.http_open(req, timeout=30, context=f"page view {url}")
+        charset = resp.headers.get_content_charset() or "utf-8"
+        html_pagina = resp.read().decode(charset, errors="replace")
+    except (urllib.error.URLError, urllib.error.HTTPError) as e:
+        log.aviso(f"      Erro ao aceder à página: {e}")
+        return None
+
+    html_limpo = _limpar_html_pagina(html_pagina, nome, nome_uc=nome_uc)
+    pdf_bytes = _html_para_pdf(html_limpo, nome, log)
+
+    if not pdf_bytes:
+        log.aviso(f"      Não foi possível gerar PDF da página '{nome}'")
+        return None
+
+    log.info(f"      -> PDF gerado: {len(pdf_bytes) / 1024:.0f} KB")
+    nome_ficheiro = re.sub(r'[^\w\s\-]', '', nome).strip()[:60] + ".pdf"
+    return {
+        "nome": nome_ficheiro,
+        "descricao": f"Moodle: {nome}",
+        "epoca": "",
+        "data": "",
+        "url": url,
+        "pdf_bytes": pdf_bytes,
+        "origem": "Moodle/page",
+    }
+
+
 def _html_para_pdf(html: str, nome_ficheiro: str, log: AuditoriaLogger) -> bytes | None:
     """Converte HTML para PDF via xhtml2pdf (se instalado).
 
@@ -1951,6 +2089,11 @@ def extrair_enunciados_moodle(
                     log.info(f"      -> PDF encontrado: {f['nome']} [{tamanho:.0f} KB]")
             else:
                 log.info(f"      -> Nenhum PDF encontrado na página do assignment")
+
+        elif tipo == "page":
+            resultado = _extrair_pagina_moodle(url, nome, sessao, log=log)
+            if resultado:
+                enunciados.append(resultado)
 
         elif tipo == "resource":
             log.info(f"    [resource] {nome} -> view.php (a tentar resolver para PDF)")
