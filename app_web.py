@@ -104,6 +104,7 @@ class Tarefa:
     log_path: Path
     started_at: float
     uc_nome: str = ""
+    uc_sigla: str = ""
     ano_letivo: str = ""
     user_code: str = ""
     llm_provider: str = ""
@@ -634,6 +635,18 @@ def _extract_horas_preview(campos: dict, chave: str) -> str:
     return str(v or "-")
 
 
+def _uc_titulo_html(nome: str, sigla: str) -> str:
+    """HTML responsivo: mostra sigla em ecrãs pequenos, nome completo nos restantes."""
+    nome_esc = _esc(nome or "(sem nome)")
+    if sigla:
+        sigla_esc = _esc(sigla)
+        return (
+            f'<span class="uc-nome-full">{nome_esc}</span>'
+            f'<span class="uc-sigla-short">{sigla_esc}</span>'
+        )
+    return nome_esc
+
+
 def _slug(texto: str) -> str:
     s = re.sub(r"\s+", "-", str(texto or "").strip().lower())
     s = re.sub(r"[^a-z0-9\-_]+", "", s)
@@ -1153,6 +1166,11 @@ def _page(title: str, body: str, step: int = 0) -> str:
     }}
     .muted {{ color: var(--muted); font-size: 13px; }}
     .mutedsmall {{ color: var(--muted); font-size: 12px; }}
+    .uc-sigla-short {{ display: none; }}
+    @media (max-width: 540px) {{
+      .uc-nome-full {{ display: none; }}
+      .uc-sigla-short {{ display: inline; }}
+    }}
     label {{ color: var(--muted); }}
     input, select {{
       padding: 9px 11px;
@@ -2435,6 +2453,7 @@ def start_job():
         job_id=job_id,
         oc_id=oc_id,
         uc_nome=uc_nome,
+        uc_sigla=uc_sigla,
         ano_letivo=ano_letivo,
         user_code=user_code,
         llm_provider=llm_provider,
@@ -2578,6 +2597,7 @@ def confirm_submit(job_id: str):
         job_id=sub_job_id,
         oc_id=prev_job.oc_id,
         uc_nome=prev_job.uc_nome,
+        uc_sigla=prev_job.uc_sigla,
         ano_letivo=prev_job.ano_letivo,
         user_code=prev_job.user_code,
         llm_provider=prev_job.llm_provider,
@@ -2682,7 +2702,10 @@ def preview(job_id: str):
         html_upload = "<p class='muted'>Nenhum enunciado novo para upload.</p>"
 
     ano_letivo_label = _format_ano_letivo_display(job.ano_letivo)
-    uc_label = _esc(payload.get("nome_uc", "") or job.uc_nome or "(sem nome)")
+    uc_label = _uc_titulo_html(
+        payload.get("nome_uc", "") or job.uc_nome,
+        payload.get("sigla_uc", "") or job.uc_sigla,
+    )
     can_submit = job.done and job.ok and job.action == "preview"
 
     body = f"""
@@ -2846,7 +2869,7 @@ def progress(job_id: str):
 
     body = f"""
     <div class="card">
-      <p style="margin:0;"><b>{_esc(job.uc_nome or '(sem nome)')} - {ano_letivo_label}</b></p>
+      <p style="margin:0;"><b>{_uc_titulo_html(job.uc_nome, job.uc_sigla)} - {ano_letivo_label}</b></p>
       <div class="muted">{estado}</div>
     </div>
     """
