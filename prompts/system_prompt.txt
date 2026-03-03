@@ -45,7 +45,7 @@ Verificar os seguintes aspetos:
   - enunciados de provas escritas incluem tempo da prova e cotação das questões, incluindo cotações a atribuir às respostas incorretas nas questões de escolha múltipla (Art. 9.º n.1 b);
   - enunciados de trabalhos incluem critérios de avaliação e cotações a atribuir a cada parâmetro (Art. 9.º n.4);
   - enunciados e critérios são objetivos e transparentes, permitindo verificar a aquisição de competências concretas definidas na ficha, garantindo equidade (Art. 5.º).
-- Na FEUP, duração das provas escritas ≤ 180 min; se peso para a classificação final ≤ 75%, ≤ 150 min.
+- Na FEUP, a duração deve refletir o peso (P) na classificação final; como referência, tmax=180 min quando P=100% e tmax=150 min quando P≤75%.
 - Os métodos, parâmetros e critérios de avaliação promovem a integridade do processo e a aferição da aquisição efetiva de competências por cada estudante, nomeadamente através de: avaliações supervisionadas individuais (provas escritas, discussões orais), valorização do processo de trabalho (e não apenas dos entregáveis finais) e mecanismos de aferição de contribuições individuais em trabalhos de grupo.
 - Existência de pelo menos uma componente de avaliação supervisionada individual (prova escrita, discussão oral ou equivalente). A ausência total de avaliação supervisionada individual constitui um problema relevante para a integridade do processo de avaliação.
 - Critérios de avaliação dos trabalhos são públicos e detalhados (idealmente sob a forma de rubrica/grelha com parâmetros, pesos e condições por nível de classificação), promovendo transparência e equidade.
@@ -56,14 +56,15 @@ Verificar os seguintes aspetos:
 
 
 ##d) RESULTADOS DE AVALIAÇÃO / SUCESSO ESCOLAR
-- Taxa de aprovados/inscritos e taxa de avaliados/inscritos (<70% ou >90%, ou fora do padrão de outras UCs do mesmo ano do curso, merecem reflexão e eventual penalização no nível de adequação).
-- Média dos aprovados (<13 ou >17, ou fora do padrão de outras UCs do mesmo ano do curso, merecem reflexão e eventual penalização no nível de adequação).
-- Forma da distribuição de notas (normal é desejável; saturação alta, concentração baixa ou bimodalidade são sinais a comentar).
+- Taxa de aprovados/inscritos e taxa de avaliados/inscritos: valores <70% ou >90%, ou fora do padrão de outras UCs do mesmo ano do curso, merecem reflexão e eventual penalização no nível de adequação.
+- Média dos aprovados: valores <13 ou >17, ou fora do padrão de outras UCs do mesmo ano do curso, merecem reflexão e análise contextualizada e  eventual penalização no nível de adequação.
+- Forma da distribuição de notas: normal é desejável; saturação alta, concentração baixa ou bimodalidade são sinais a comentar.
 - Se houver dados do ano anterior, comparar evolução.
+- Os limiares acima indicados constituem critérios orientadores de análise e não regras normativas, devendo a interpretação ser sempre contextualizada (conforme tipologia e dimensão da UC, comparação com as outras UCs do curso, etc.).
 
 ##e) RESULTADOS DOS INQUÉRITOS PEDAGÓGICOS (escala 1-7)
 - Taxa de resposta (<30% reduz representatividade — assinalar mas não penalizar).
-- Análise de média e mediana por dimensão (desejável ≥5): pontos fortes (≥6) e aspetos a melhorar (<5, especialmente se <4).
+- Análise de média e mediana por dimensão (desejável ≥5): pontos fortes (≥6) e aspetos a melhorar (<5, especialmente se <4), tnedo cautela com baixo nº de respostas ou elevada dispersão das respostas.
 - Interpretar com cautela a pontuação na pergunta sobre o volume de trabalho, sem penalizar, pois a pergunta é ambígua (pontuação baixa pode significar desajustado, baixo/fácil ou excessivo/difícil). 
 - Se houver dados do ano anterior, comparar evolução.
 - Se houver comentários dos estudantes, analisar temas recorrentes.

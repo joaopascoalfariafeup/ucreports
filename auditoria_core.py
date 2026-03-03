@@ -346,6 +346,7 @@ def analisar_uc(
     turmas = {s["turma"] for s in sums}
     log.concluir_fase("sumarios", f"{len(sums)} sumários extraídos" + (f" de {len(turmas)} turma(s)" if turmas else ""))
 
+    aulas_sem_sumario: list[dict] = []
     if not sums:
         log.aviso("  Nenhum sumário encontrado.")
     else:
@@ -358,6 +359,10 @@ def analisar_uc(
 
         # Verificar aulas sem sumário
         sem_sumario = [s for s in sums if not s["sumario"].strip()]
+        aulas_sem_sumario = [
+            {"turma": s["turma"], "tipo_aula": s["tipo_aula"], "numero": s["numero"], "data": s["data"]}
+            for s in sem_sumario
+        ]
         if sem_sumario:
             log.aviso(f"{len(sem_sumario)} aula(s) sem sumário.")
         else:
@@ -549,6 +554,7 @@ def analisar_uc(
 
     # Verificar classificações pendentes nas pautas
     log.info("\n  A verificar pautas (classificações pendentes)...")
+    pautas_classificacoes_pendentes: list[dict] = []
     try:
         pautas = extrair_pautas_uc(oc_id, sessao)
         if not pautas:
@@ -561,6 +567,11 @@ def analisar_uc(
                 log.info(f"  ✓ {p['epoca']}: todos os {p['n_estudantes']} estudantes com classificação final")
             else:
                 log.aviso(f"{p['epoca']}: {sem} estudante(s) ainda sem classificação final")
+                pautas_classificacoes_pendentes.append({
+                    "epoca": p["epoca"],
+                    "sem_classificacao": sem,
+                    "n_estudantes": p["n_estudantes"],
+                })
     except Exception as e:
         log.aviso(f"Não foi possível verificar pautas ({e})")
 
@@ -710,6 +721,8 @@ def analisar_uc(
             "ocorrencia_id": oc_id,
             "nome_uc": ficha.get("nome_uc", ""),
             "enunciados_excluidos_rgpd": enunciados_excluidos_rgpd,
+            "aulas_sem_sumario": aulas_sem_sumario,
+            "pautas_classificacoes_pendentes": pautas_classificacoes_pendentes,
             "programa_efetivo": programa_efetivo or "",
             "comentarios_resultados": campos.get("pv_rel_coment_res", ""),
             "comentarios_funcionamento": campos.get("pv_rel_coment_func", ""),

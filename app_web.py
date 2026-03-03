@@ -2759,8 +2759,45 @@ def preview(job_id: str):
     else:
         aviso_rgpd = ""
 
+    aulas_sem_sumario = payload.get("aulas_sem_sumario", [])
+    if aulas_sem_sumario:
+        # Agrupar por turma para apresentação mais clara
+        turmas_map: dict[str, list[str]] = {}
+        for a in aulas_sem_sumario:
+            chave = f"{a['turma']} ({a['tipo_aula']})" if a.get("tipo_aula") else a["turma"]
+            turmas_map.setdefault(chave, []).append(f"Aula {a['numero']} ({a['data']})")
+        itens_sums = "".join(
+            f"<li>{_esc(turma)}: <span class='muted'>{_esc(', '.join(aulas))}</span></li>"
+            for turma, aulas in turmas_map.items()
+        )
+        aviso_sumarios = f"""
+    <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
+      <b>⚠ {len(aulas_sem_sumario)} aula(s) sem sumário</b>
+      <ul style="margin:6px 0 0;padding-left:18px;">{itens_sums}</ul>
+    </div>"""
+    else:
+        aviso_sumarios = ""
+
+    pautas_pendentes = payload.get("pautas_classificacoes_pendentes", [])
+    if pautas_pendentes:
+        itens_pautas = "".join(
+            f"<li>{_esc(p['epoca'])}: <span class='muted'>{p['sem_classificacao']} estudante(s) ainda sem classificação final"
+            + (f" (de {p['n_estudantes']})" if p.get("n_estudantes") else "")
+            + "</span></li>"
+            for p in pautas_pendentes
+        )
+        aviso_pautas = f"""
+    <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
+      <b>⚠ Classificações por lançar</b>
+      <ul style="margin:6px 0 0;padding-left:18px;">{itens_pautas}</ul>
+    </div>"""
+    else:
+        aviso_pautas = ""
+
     body = f"""
     {aviso_rgpd}
+    {aviso_sumarios}
+    {aviso_pautas}
     <div class="card">
       {uc_titulo}
       <p class="muted">Reveja o conteúdo abaixo antes de submeter ao SIGARRA. Pode editar os campos de texto clicando em «Editar».</p>
