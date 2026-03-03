@@ -653,7 +653,7 @@ def _uc_titulo_html(nome: str, sigla: str, ano: str = "") -> str:
     enquanto o nome longo encolhe com text-overflow: ellipsis.
     """
     nome_esc = _esc(nome or "(sem nome)")
-    ano_html = f'<span class="uc-ano-tag"> · {_esc(ano)}</span>' if ano else ""
+    ano_html = f'<span class="uc-ano-tag"> — {_esc(ano)}</span>' if ano else ""
     if sigla:
         sigla_esc = _esc(sigla)
         return (
@@ -1206,7 +1206,7 @@ def _page(title: str, body: str, step: int = 0) -> str:
       text-overflow: ellipsis;
       white-space: nowrap;
       min-width: 0;
-      flex: 1;
+      flex: 0 1 auto;
     }}
     .uc-ano-tag {{ font-weight: normal; flex-shrink: 0; white-space: nowrap; }}
     .card {{ overflow: hidden; }}
@@ -1431,7 +1431,7 @@ function setupUCSelection() {
     const update = () => {
       const opt = sel.options[sel.selectedIndex];
       const txt = (opt && opt.text) ? opt.text : '';
-      hiddenNome.value = (txt.split(' — ')[0] || '').replace(/^\[[^\]]+\]\s*/, '').trim();
+      hiddenNome.value = ((opt && opt.dataset && opt.dataset.nome) ? opt.dataset.nome : (txt.split(' — ')[0] || '')).trim();
       if (hiddenSigla) hiddenSigla.value = ((opt && opt.dataset && opt.dataset.sigla) ? opt.dataset.sigla : '').trim();
     };
     sel.addEventListener('change', update);
@@ -2293,7 +2293,7 @@ def ucs():
             sigla = u.get("sigla_uc", u.get("sigla", ""))
             sigla_prefix = f'{_esc(sigla)} — ' if sigla else ""
             option_parts.append(
-                f'<option value="{u["ocorrencia_id"]}" data-sigla="{_esc(sigla)}"'
+                f'<option value="{u["ocorrencia_id"]}" data-sigla="{_esc(sigla)}" data-nome="{_esc(u["nome_uc"])}"'
                 f'{" selected" if u is uc_presel else ""}>'
                 f'{sigla_prefix}{_esc(u["nome_uc"])} — {_esc(u["curso"])} — {_esc(_format_ano_servico(u["ano"]))} — {_esc(_format_periodo_display(u["periodo"]))} '
                 f"</option>"
