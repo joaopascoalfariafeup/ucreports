@@ -68,9 +68,11 @@ def _verificar_dados_pessoais(pdf_bytes: bytes) -> tuple[bool, list[str]]:
     motivos: list[str] = []
     linhas = [l.strip() for l in texto.splitlines()]
 
-    # A) Números de estudante UP  (up202012345)
-    if re.search(r'\bup\d{5,9}\b', texto, re.IGNORECASE):
-        motivos.append("número(s) de estudante UP")
+    # A) Números de estudante UP  (up202012345) — requer ≥3 ocorrências distintas
+    #    (1-2 podem ser coincidência ou exemplo; ≥3 sugere lista de estudantes)
+    ups = set(re.findall(r'\bup\d{5,9}\b', texto, re.IGNORECASE))
+    if len(ups) >= 3:
+        motivos.append(f"números de estudante UP ({len(ups)} distintos)")
 
     # B) Referências explícitas a identificação de aluno
     if re.search(
