@@ -2767,7 +2767,7 @@ def preview(job_id: str):
             chave = f"{a['turma']} ({a['tipo_aula']})" if a.get("tipo_aula") else a["turma"]
             turmas_map[chave] = turmas_map.get(chave, 0) + 1
         itens_sums = "".join(
-            f"<li>{n} aula(s) sem sumário da turma <span class='muted'>{_esc(turma)}</span></li>"
+            f"<li>{_esc(turma)}: <span class='muted'>{n} aula(s) sem sumário</span></li>"
             for turma, n in turmas_map.items()
         )
         aviso_sumarios = f"""
