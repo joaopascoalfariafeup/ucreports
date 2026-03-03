@@ -607,20 +607,20 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
 
 
 def _extrair_sigla_uc(html: str) -> str:
-    """Extrai a sigla da UC (ex: M.EIC044, MESW001) da ficha de UC.
+    """Extrai a sigla abreviada da UC (ex: TACS, ESOF) da ficha de UC.
 
-    Prioriza a tabela de identificação logo após o ``<h1>`` (campo
-    "Sigla:"), depois tenta URLs com ``pv_sigla=`` e, por fim,
-    padrões de sigla no cabeçalho ``<h2>`` da página.
+    Prioriza o campo «Sigla:» na tabela de identificação da ficha
+    (sem ancorar no <h1>, para ser robusto a variações de layout),
+    depois tenta URLs com ``pv_sigla=`` e, por fim,
+    padrões de código no cabeçalho ``<h2>`` da página.
 
     Returns:
         Sigla da UC, ou string vazia se não encontrada.
     """
-    # Pattern 1: campo "Sigla:" na tabela de identificação da ficha
+    # Pattern 1: campo "Sigla:" na tabela de identificação — procura directamente
+    # sem ancorar no <h1> para ser robusto a variações de layout do SIGARRA.
     m = re.search(
-        r'<h1[^>]*>.*?</h1>\s*'
-        r'<table[^>]*class=["\"][^"\>]*formulario[^"\>]*["\"][^>]*>.*?'
-        r'<td[^>]*class=["\"][^"\>]*formulario-legenda[^"\>]*["\"][^>]*>\s*Sigla:\s*</td>\s*'
+        r'<td[^>]*class=["\'][^"\']*formulario-legenda[^"\']*["\'][^>]*>\s*Sigla:\s*</td>\s*'
         r'<td[^>]*>\s*([^<\s]+)\s*</td>',
         html,
         re.DOTALL | re.IGNORECASE,

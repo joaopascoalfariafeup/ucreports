@@ -1052,7 +1052,7 @@ def _page(title: str, body: str, step: int = 0) -> str:
     .row {{ display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }}
     .form-row-inline {{ display:flex; align-items:center; gap:10px; margin-top:10px; }}
     .form-row-inline label {{ min-width: 150px; margin: 0; }}
-    .form-row-inline select {{ width: auto; max-width: min(560px, 100%); }}
+    .form-row-inline select {{ width: auto; max-width: min(560px, 100%); padding-left: 7px; padding-right: 7px; }}
 .form-grid {{
       display: grid;
       grid-template-columns: minmax(0, 1fr) 380px;
