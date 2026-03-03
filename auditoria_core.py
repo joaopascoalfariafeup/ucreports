@@ -482,8 +482,6 @@ def analisar_uc(
                 enunciados_excluidos_rgpd.append({"nome": e["nome"], "motivos": motivos})
             else:
                 limpos.append(e)
-        if enunciados_excluidos_rgpd:
-            log.fase(f"  ⚠ {len(enunciados_excluidos_rgpd)} enunciado(s) excluído(s) por precaução RGPD")
         enunciados = limpos
 
     if enunciados:
