@@ -2319,7 +2319,7 @@ def ucs():
 
             <div class="form-row-inline">
               <label for="llm_choice_select">Modelo:</label>
-              <select name="llm_choice" id="llm_choice_select" required>
+              <select name="llm_choice" id="llm_choice_select" required style="max-width:280px;">
                 {llm_choice_option_tags}
               </select>
             </div>
