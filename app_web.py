@@ -2285,13 +2285,17 @@ def ucs():
         ).replace("</", "<\\/")
         # UC pré-selecionada: última usada (se existir na lista atual), senão a primeira
         uc_presel = next((u for u in ucs_list if u["ocorrencia_id"] == last_oc_id), None) or (ucs_list[0] if ucs_list else None)
-        options = "\n".join(
-            f'<option value="{u["ocorrencia_id"]}" data-sigla="{_esc(u.get("sigla_uc", u.get("sigla", "")))}"'
-            f'{" selected" if u is uc_presel else ""}>'
-            f'{_esc(u["nome_uc"])} — {_esc(u["curso"])} — {_esc(_format_ano_servico(u["ano"]))} — {_esc(_format_periodo_display(u["periodo"]))} '
-            f"</option>"
-            for u in ucs_list
-        )
+        option_parts = []
+        for u in ucs_list:
+            sigla = u.get("sigla_uc", u.get("sigla", ""))
+            sigla_prefix = f'[{_esc(sigla)}] ' if sigla else ""
+            option_parts.append(
+                f'<option value="{u["ocorrencia_id"]}" data-sigla="{_esc(sigla)}"'
+                f'{" selected" if u is uc_presel else ""}>'
+                f'{sigla_prefix}{_esc(u["nome_uc"])} — {_esc(u["curso"])} — {_esc(_format_ano_servico(u["ano"]))} — {_esc(_format_periodo_display(u["periodo"]))} '
+                f"</option>"
+            )
+        options = "\n".join(option_parts)
         primeira_uc = uc_presel.get("nome_uc", "") if uc_presel else ""
         primeira_sigla = uc_presel.get("sigla_uc", uc_presel.get("sigla", "")) if uc_presel else ""
 
