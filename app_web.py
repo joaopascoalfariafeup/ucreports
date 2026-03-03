@@ -1201,7 +1201,6 @@ def _page(title: str, body: str, step: int = 0) -> str:
     .uc-sigla-tag {{ font-weight: normal; flex-shrink: 0; white-space: nowrap; }}
     .uc-nome-tag {{
       font-weight: normal;
-      color: var(--muted);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
