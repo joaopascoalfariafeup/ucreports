@@ -90,23 +90,40 @@ def _verificar_dados_pessoais(pdf_bytes: bytes) -> tuple[bool, list[str]]:
     if len(atrib) >= 2:
         motivos.append(f"atribuição de estudantes a grupos/temas ({len(atrib)} ocorrências)")
 
-    # D) Lista de nomes: 5+ linhas consecutivas com apenas 2-3 palavras capitalizadas
-    #    (típico de listas institucionais; exclui linhas com dígitos ou palavras técnicas)
-    contador_nome = 0
+    # D) Lista de nomes próprios — permite conectores minúsculos (de, da, do…)
+    #    e nomes com 2-4 palavras. Dispara se ≥4 consecutivas OU ≥12 no total
+    #    (cobre listas intercaladas com cabeçalhos de horário/tópico).
+    _CONN = {'de', 'da', 'do', 'dos', 'das', 'e', 'du', 'van', 'von', 'of', 'and'}
+
+    def _e_linha_nome(ln: str) -> bool:
+        if not ln or re.search(r'[\d\(\)\[\]:;@]', ln):
+            return False
+        palavras = ln.split()
+        if not (2 <= len(palavras) <= 4):
+            return False
+        caps = 0
+        for w in palavras:
+            if w.lower() in _CONN:
+                continue
+            if not re.match(r'^[A-ZÁÉÍÓÚÀÃÕÇÂÊÎÔÛÜ][a-záéíóúàãõçâêîôûü\-]{1,14}$', w):
+                return False
+            caps += 1
+        return caps >= 2
+
+    consec = 0
+    total_nomes = 0
     for linha in linhas:
-        if not linha:
-            contador_nome = 0
-            continue
-        palavras = linha.split()
-        if (2 <= len(palavras) <= 3
-                and all(re.match(r'^[A-ZÁÉÍÓÚÀÃÕÇÂÊÎÔÛÜ][a-záéíóúàãõçâêîôûü\-]{2,14}$', w)
-                        for w in palavras)):
-            contador_nome += 1
-            if contador_nome >= 5:
-                motivos.append("lista de nomes (≥5 linhas com possíveis nomes próprios)")
+        if _e_linha_nome(linha):
+            consec += 1
+            total_nomes += 1
+            if consec >= 4:
+                motivos.append(f"lista de nomes (≥4 linhas consecutivas com nomes próprios)")
                 break
-        else:
-            contador_nome = 0
+        elif linha:
+            consec = 0
+    else:
+        if total_nomes >= 12:
+            motivos.append(f"lista de nomes ({total_nomes} linhas com possíveis nomes próprios)")
 
     # E) Linha com "nota final"/"classificação" E valor 0-20 na MESMA linha
     #    (exige proximidade — evita falso positivo em rubrica de cotações de quiz)
