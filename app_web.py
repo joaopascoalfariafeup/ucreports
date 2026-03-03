@@ -635,16 +635,29 @@ def _extract_horas_preview(campos: dict, chave: str) -> str:
     return str(v or "-")
 
 
-def _uc_titulo_html(nome: str, sigla: str) -> str:
-    """HTML responsivo: mostra sigla em ecrãs pequenos, nome completo nos restantes."""
+def _uc_titulo_html(nome: str, sigla: str, ano: str = "") -> str:
+    """Título da UC: sigla em negrito + nome truncado com ellipsis + ano letivo.
+
+    Usa flex para garantir que sigla e ano nunca são cortados,
+    enquanto o nome longo encolhe com text-overflow: ellipsis.
+    """
     nome_esc = _esc(nome or "(sem nome)")
+    ano_html = f'<span class="uc-ano-tag"> · {_esc(ano)}</span>' if ano else ""
     if sigla:
         sigla_esc = _esc(sigla)
         return (
-            f'<span class="uc-nome-full">{nome_esc}</span>'
-            f'<span class="uc-sigla-short">{sigla_esc}</span>'
+            f'<p class="uc-card-title">'
+            f'<span class="uc-sigla-tag">{sigla_esc}</span>'
+            f'<span class="uc-nome-tag"> — {nome_esc}</span>'
+            f'{ano_html}'
+            f'</p>'
         )
-    return nome_esc
+    return (
+        f'<p class="uc-card-title">'
+        f'<span class="uc-sigla-tag">{nome_esc}</span>'
+        f'{ano_html}'
+        f'</p>'
+    )
 
 
 def _slug(texto: str) -> str:
@@ -1166,11 +1179,26 @@ def _page(title: str, body: str, step: int = 0) -> str:
     }}
     .muted {{ color: var(--muted); font-size: 13px; }}
     .mutedsmall {{ color: var(--muted); font-size: 12px; }}
-    .uc-sigla-short {{ display: none; }}
-    @media (max-width: 540px) {{
-      .uc-nome-full {{ display: none; }}
-      .uc-sigla-short {{ display: inline; }}
+    .uc-card-title {{
+      margin: 0;
+      display: flex;
+      align-items: baseline;
+      min-width: 0;
+      overflow: hidden;
+      gap: 0;
     }}
+    .uc-sigla-tag {{ font-weight: bold; flex-shrink: 0; white-space: nowrap; }}
+    .uc-nome-tag {{
+      font-weight: normal;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      flex: 1;
+    }}
+    .uc-ano-tag {{ font-weight: bold; flex-shrink: 0; white-space: nowrap; }}
+    .card {{ overflow: hidden; }}
     label {{ color: var(--muted); }}
     input, select {{
       padding: 9px 11px;
@@ -2702,15 +2730,16 @@ def preview(job_id: str):
         html_upload = "<p class='muted'>Nenhum enunciado novo para upload.</p>"
 
     ano_letivo_label = _format_ano_letivo_display(job.ano_letivo)
-    uc_label = _uc_titulo_html(
+    uc_titulo = _uc_titulo_html(
         payload.get("nome_uc", "") or job.uc_nome,
         payload.get("sigla_uc", "") or job.uc_sigla,
+        ano_letivo_label,
     )
     can_submit = job.done and job.ok and job.action == "preview"
 
     body = f"""
     <div class="card">
-      <p style="margin:0;"><b>{uc_label} - {ano_letivo_label}</b></p>
+      {uc_titulo}
       <p class="muted">Reveja o conteúdo abaixo antes de submeter ao SIGARRA. Pode editar os campos de texto clicando em «Editar».</p>
       <p class="muted">Depois de submeter, pode ainda editar no SIGARRA.</p>
       <p class="muted" style="margin-top:10px;">
@@ -2869,7 +2898,7 @@ def progress(job_id: str):
 
     body = f"""
     <div class="card">
-      <p style="margin:0;"><b>{_uc_titulo_html(job.uc_nome, job.uc_sigla)} - {ano_letivo_label}</b></p>
+      {_uc_titulo_html(job.uc_nome, job.uc_sigla, ano_letivo_label)}
       <div class="muted">{estado}</div>
     </div>
     """
