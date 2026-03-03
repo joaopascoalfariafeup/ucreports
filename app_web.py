@@ -2743,7 +2743,24 @@ def preview(job_id: str):
     )
     can_submit = job.done and job.ok and job.action == "preview"
 
+    excluidos_rgpd = payload.get("enunciados_excluidos_rgpd", [])
+    if excluidos_rgpd:
+        itens_rgpd = "".join(
+            f"<li><b>{_esc(e['nome'])}</b> — {_esc('; '.join(e['motivos']))}</li>"
+            for e in excluidos_rgpd
+        )
+        aviso_rgpd = f"""
+    <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
+      <b>⚠ Enunciados excluídos por precaução RGPD</b>
+      <p class="muted" style="margin:6px 0 8px;">Os seguintes ficheiros não foram enviados para o LLM por possível conteúdo com dados pessoais de estudantes (nomes, números de matrícula). A análise de enunciados foi feita sem eles.</p>
+      <ul style="margin:0 0 8px;padding-left:18px;">{itens_rgpd}</ul>
+      <p class="muted">Sugestão: separe o enunciado de avaliação das listas de estudantes/grupos antes de o carregar no SIGARRA ou Moodle.</p>
+    </div>"""
+    else:
+        aviso_rgpd = ""
+
     body = f"""
+    {aviso_rgpd}
     <div class="card">
       {uc_titulo}
       <p class="muted">Reveja o conteúdo abaixo antes de submeter ao SIGARRA. Pode editar os campos de texto clicando em «Editar».</p>

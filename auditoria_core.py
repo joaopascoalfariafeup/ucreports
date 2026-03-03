@@ -6,10 +6,13 @@ e preenche automaticamente o relatório da UC.
 """
 
 import hashlib
+import io
 import json
 import os
 import re
 from pathlib import Path
+
+from pypdf import PdfReader
 
 from sigarra import (
     SigarraSession, SIGARRA_BASE, extrair_ficha_uc, extrair_sumarios,
@@ -38,6 +41,74 @@ def _normalizar_nome_enunciado(nome: str) -> str:
     nome = re.sub(r'[-_\s]v\d+\s*$', '', nome)   # remove -v2, _v2, v2
     nome = re.sub(r'[^a-z0-9]', '', nome)         # só alfanuméricos
     return nome
+
+
+def _verificar_dados_pessoais(pdf_bytes: bytes) -> tuple[bool, list[str]]:
+    """Deteta possíveis dados pessoais de estudantes num PDF de enunciado.
+
+    Devolve (suspeito: bool, motivos: list[str]).
+    Preferência por falsos positivos (exclusão cautelar) sobre falsos negativos (RGPD).
+    Nomes de docentes (1-2 em prosa normal) não acionam alerta.
+    PDFs sem texto extraível (scanned) são excluídos preventivamente.
+    """
+    try:
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        texto = "\n".join(
+            (p.extract_text() or "") for p in reader.pages[:20]
+        ).strip()
+    except Exception:
+        return True, ["falha na leitura do PDF"]
+
+    if len(texto) < 80:
+        return True, ["PDF sem texto extraível — verificação automática impossível (PDF scanned?)"]
+
+    motivos: list[str] = []
+    linhas = [l.strip() for l in texto.splitlines()]
+
+    # A) Números de estudante UP  (up202012345)
+    if re.search(r'\bup\d{5,9}\b', texto, re.IGNORECASE):
+        motivos.append("número(s) de estudante UP")
+
+    # B) Referências explícitas a identificação de aluno
+    if re.search(
+        r'\b(n[º°o]?\s*(?:de\s+)?alun[oa]|student\s*(?:id|no\.?|number)|matrícula)\s*[:\-]',
+        texto, re.IGNORECASE,
+    ):
+        motivos.append("referência explícita a identificação de estudante")
+
+    # C) Atribuição de grupos/temas a nomes  ("Grupo 1: Ana Silva")
+    atrib = re.findall(
+        r'\b(grupo|team|tema|tópico|topic|alun[oa])\s*\d*\s*[:\-—]\s*'
+        r'[A-ZÁÉÍÓÚÀÃÕÇÂÊÎÔÛÜ][a-záéíóúàãõçâêîôûü]+',
+        texto, re.IGNORECASE,
+    )
+    if len(atrib) >= 2:
+        motivos.append(f"atribuição de estudantes a grupos/temas ({len(atrib)} ocorrências)")
+
+    # D) Lista de nomes: 5+ linhas consecutivas com apenas 2-3 palavras capitalizadas
+    #    (típico de listas institucionais; exclui linhas com dígitos ou palavras técnicas)
+    contador_nome = 0
+    for linha in linhas:
+        if not linha:
+            contador_nome = 0
+            continue
+        palavras = linha.split()
+        if (2 <= len(palavras) <= 3
+                and all(re.match(r'^[A-ZÁÉÍÓÚÀÃÕÇÂÊÎÔÛÜ][a-záéíóúàãõçâêîôûü\-]{2,14}$', w)
+                        for w in palavras)):
+            contador_nome += 1
+            if contador_nome >= 5:
+                motivos.append("lista de nomes (≥5 linhas com possíveis nomes próprios)")
+                break
+        else:
+            contador_nome = 0
+
+    # E) Tabela de notas: "nota"/"grade"/"classificação" com valores 0-20
+    if re.search(r'\b(nota|grade|classificação)\b', texto, re.IGNORECASE):
+        if re.search(r'\b(1[0-9]|20|[0-9])[,.]?\d?\s*(?:val(?:ores?)?|/20)?\b', texto):
+            motivos.append("possível tabela de classificações (0–20)")
+
+    return bool(motivos), motivos
 
 
 def _processar_enunciados_moodle_bloco(
@@ -375,6 +446,21 @@ def analisar_uc(
     dups_info = f", {n_dups} duplicado(s)" if n_dups else ""
     log.concluir_fase("enunciados", f"{len(enunciados)} enunciado(s) extraído(s){resumo_orig}{dups_info}")
 
+    # RGPD: filtrar enunciados com possíveis dados pessoais antes de enviar para LLM
+    enunciados_excluidos_rgpd: list[dict] = []
+    if enunciados:
+        limpos = []
+        for e in enunciados:
+            suspeito, motivos = _verificar_dados_pessoais(e["pdf_bytes"])
+            if suspeito:
+                log.fase(f"  ⚠ RGPD: '{e['nome']}' excluído da análise LLM — {'; '.join(motivos)}")
+                enunciados_excluidos_rgpd.append({"nome": e["nome"], "motivos": motivos})
+            else:
+                limpos.append(e)
+        if enunciados_excluidos_rgpd:
+            log.fase(f"  ⚠ {len(enunciados_excluidos_rgpd)} enunciado(s) excluído(s) por precaução RGPD")
+        enunciados = limpos
+
     if enunciados:
         for e in enunciados:
             tamanho_kb = len(e["pdf_bytes"]) / 1024
@@ -600,6 +686,7 @@ def analisar_uc(
         preview_payload = {
             "ocorrencia_id": oc_id,
             "nome_uc": ficha.get("nome_uc", ""),
+            "enunciados_excluidos_rgpd": enunciados_excluidos_rgpd,
             "programa_efetivo": programa_efetivo or "",
             "comentarios_resultados": campos.get("pv_rel_coment_res", ""),
             "comentarios_funcionamento": campos.get("pv_rel_coment_func", ""),
