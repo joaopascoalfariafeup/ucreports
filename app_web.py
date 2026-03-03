@@ -35,7 +35,7 @@ from flask_limiter.util import get_remote_address
 from sigarra import SigarraSession, load_env
 from logger import AuditoriaLogger
 from auditoria_core import analisar_uc, submeter_preview_uc, _SCRIPT_DIR
-from sigarra import extrair_ocorrencias_servico_docente, extrair_anos_servico_docente
+from sigarra import extrair_ocorrencias_servico_docente
 from sigarra import extrair_ficha_uc
 
 
@@ -87,13 +87,24 @@ _ANOS_LETIVOS_FIM    = int(os.environ.get("WEB_ANOS_LETIVOS_FIM",    "0") or "0"
 
 
 def _anos_letivos_hardcoded() -> list[dict]:
-    """Gera lista de anos letivos a partir de WEB_ANOS_LETIVOS_INICIO/FIM.
-    Devolve [] se não configurado (cai de volta para consulta SIGARRA)."""
-    if not _ANOS_LETIVOS_INICIO or not _ANOS_LETIVOS_FIM:
-        return []
+    """Gera lista de anos letivos.
+
+    Se WEB_ANOS_LETIVOS_INICIO/FIM estiver configurado, usa esse intervalo.
+    Caso contrário, devolve o ano corrente e o anterior (SIGARRA só aceita
+    relatórios para esses dois anos).  Lógica de 'ano corrente':
+      mês >= setembro → ano_inicio = ano_civil atual  (ex: set 2026 → 2026/27)
+      mês < setembro  → ano_inicio = ano_civil - 1    (ex: jun 2026 → 2025/26)
+    """
+    if _ANOS_LETIVOS_INICIO and _ANOS_LETIVOS_FIM:
+        return [
+            {"ano_inicio": str(y), "ano_letivo": f"{y}/{y + 1}"}
+            for y in range(_ANOS_LETIVOS_FIM, _ANOS_LETIVOS_INICIO - 1, -1)
+        ]
+    hoje = datetime.now()
+    ano_corrente = hoje.year if hoje.month >= 9 else hoje.year - 1
     return [
         {"ano_inicio": str(y), "ano_letivo": f"{y}/{y + 1}"}
-        for y in range(_ANOS_LETIVOS_FIM, _ANOS_LETIVOS_INICIO - 1, -1)
+        for y in [ano_corrente, ano_corrente - 1]
     ]
 
 
@@ -2149,10 +2160,7 @@ def ucs():
 
         if not from_cache:
             try:
-                anos_disponiveis = _anos_letivos_hardcoded() or extrair_anos_servico_docente(
-                    sessao=sess,
-                    doc_codigo=doc_codigo,
-                )
+                anos_disponiveis = _anos_letivos_hardcoded()
 
                 ucs_list, meta = extrair_ocorrencias_servico_docente(
                     sessao=sess,
@@ -2222,7 +2230,7 @@ def ucs():
       <form id="ucs-filter-form" method="get" action="{url_for('ucs')}">
         <div class="form-row-inline">
           <label>Ano letivo:</label>
-          <select name="ano_letivo">
+          <select name="ano_letivo" style="max-width:130px;flex:0 1 auto;">
             {options_anos}
           </select>
         </div>
