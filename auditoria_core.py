@@ -62,6 +62,9 @@ def _verificar_dados_pessoais(pdf_bytes: bytes) -> tuple[bool, list[str]]:
     if len(texto) < 80:
         return True, ["PDF sem texto extraível — verificação automática impossível (PDF scanned?)"]
 
+    # Remover URLs antes de verificar — evita falsos positivos (ex: pages.up.pt/~up535006/)
+    texto = re.sub(r'https?://\S+|www\.\S+', '', texto)
+
     motivos: list[str] = []
     linhas = [l.strip() for l in texto.splitlines()]
 
