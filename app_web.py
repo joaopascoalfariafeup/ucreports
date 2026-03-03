@@ -2752,7 +2752,7 @@ def preview(job_id: str):
         aviso_rgpd = f"""
     <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
       <b>⚠ Enunciados excluídos por precaução RGPD</b>
-      <p class="muted" style="margin:6px 0 8px;">Os seguintes ficheiros não foram enviados para o LLM por poderem conter dados pessoais de estudantes (nomes, números de matrícula). A análise de enunciados foi feita sem eles.</p>
+      <p class="muted" style="margin:6px 0 8px;">Os seguintes ficheiros não foram enviados para o LLM para análise de enunciados por poderem conter dados pessoais de estudantes (nomes, números de matrícula).</p>
       <ul style="margin:0 0 8px;padding-left:18px;">{itens_rgpd}</ul>
       <p class="muted">Sugestão: separe o enunciado de avaliação das listas de estudantes/grupos antes de o carregar no SIGARRA ou Moodle.</p>
     </div>"""
