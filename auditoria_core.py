@@ -103,10 +103,13 @@ def _verificar_dados_pessoais(pdf_bytes: bytes) -> tuple[bool, list[str]]:
         else:
             contador_nome = 0
 
-    # E) Tabela de notas: "nota"/"grade"/"classificação" com valores 0-20
-    if re.search(r'\b(nota|grade|classificação)\b', texto, re.IGNORECASE):
-        if re.search(r'\b(1[0-9]|20|[0-9])[,.]?\d?\s*(?:val(?:ores?)?|/20)?\b', texto):
-            motivos.append("possível tabela de classificações (0–20)")
+    # E) Linha com "nota final"/"classificação" E valor 0-20 na MESMA linha
+    #    (exige proximidade — evita falso positivo em rubrica de cotações de quiz)
+    for linha in linhas:
+        if re.search(r'\b(nota\s+final|classificação|grade\s+final)\b', linha, re.IGNORECASE):
+            if re.search(r'\b(1[0-9]|20|[0-9])[,.]?\d?\b', linha):
+                motivos.append("linha com indicador de nota final e valor 0–20")
+                break
 
     return bool(motivos), motivos
 
