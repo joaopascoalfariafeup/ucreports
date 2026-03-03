@@ -1198,7 +1198,7 @@ def _page(title: str, body: str, step: int = 0) -> str:
       overflow: hidden;
       gap: 0;
     }}
-    .uc-sigla-tag {{ font-weight: bold; flex-shrink: 0; white-space: nowrap; }}
+    .uc-sigla-tag {{ font-weight: normal; flex-shrink: 0; white-space: nowrap; }}
     .uc-nome-tag {{
       font-weight: normal;
       color: var(--muted);
@@ -1208,7 +1208,7 @@ def _page(title: str, body: str, step: int = 0) -> str:
       min-width: 0;
       flex: 1;
     }}
-    .uc-ano-tag {{ font-weight: bold; flex-shrink: 0; white-space: nowrap; }}
+    .uc-ano-tag {{ font-weight: normal; flex-shrink: 0; white-space: nowrap; }}
     .card {{ overflow: hidden; }}
     label {{ color: var(--muted); }}
     input, select {{
@@ -1436,7 +1436,7 @@ function setupUCSelection() {
     const update = () => {
       const opt = sel.options[sel.selectedIndex];
       const txt = (opt && opt.text) ? opt.text : '';
-      hiddenNome.value = (txt.split(' — ')[0] || '').trim();
+      hiddenNome.value = (txt.split(' — ')[0] || '').replace(/^\[[^\]]+\]\s*/, '').trim();
       if (hiddenSigla) hiddenSigla.value = ((opt && opt.dataset && opt.dataset.sigla) ? opt.dataset.sigla : '').trim();
     };
     sel.addEventListener('change', update);
