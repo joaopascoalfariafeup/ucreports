@@ -2746,7 +2746,7 @@ def preview(job_id: str):
     excluidos_rgpd = payload.get("enunciados_excluidos_rgpd", [])
     if excluidos_rgpd:
         itens_rgpd = "".join(
-            f"<li><b>{_esc(e['nome'])}</b> — {_esc('; '.join(e['motivos']))}</li>"
+            f"<li>{_esc(e['nome'])} — <span class='muted'>{_esc('; '.join(e['motivos']))}</span></li>"
             for e in excluidos_rgpd
         )
         aviso_rgpd = f"""
