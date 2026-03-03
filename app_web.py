@@ -86,7 +86,7 @@ _ANOS_LETIVOS_INICIO = int(os.environ.get("WEB_ANOS_LETIVOS_INICIO", "0") or "0"
 _ANOS_LETIVOS_FIM    = int(os.environ.get("WEB_ANOS_LETIVOS_FIM",    "0") or "0")
 
 
-def _anos_letivos_hardcoded() -> list[dict]:
+def _gera_lista_anos_letivos() -> list[dict]:
     """Gera lista de anos letivos.
 
     Se WEB_ANOS_LETIVOS_INICIO/FIM estiver configurado, usa esse intervalo.
@@ -1256,11 +1256,6 @@ def _page(title: str, body: str, step: int = 0) -> str:
       overflow-y: auto;
       border: 1px solid var(--line);
     }}
-    /*
-    pre:empty {{
-      display: none;
-    }}
-    */
     a {{ color: #1d4ed8; text-decoration: none; }}
     a:hover {{ text-decoration: underline; }}
     code {{ background: #f3f4f6; border: 1px solid var(--line); padding: 2px 6px; border-radius: 6px; }}
@@ -2160,7 +2155,7 @@ def ucs():
 
         if not from_cache:
             try:
-                anos_disponiveis = _anos_letivos_hardcoded()
+                anos_disponiveis = _gera_lista_anos_letivos()
 
                 ucs_list, meta = extrair_ocorrencias_servico_docente(
                     sessao=sess,
@@ -2296,7 +2291,7 @@ def ucs():
         option_parts = []
         for u in ucs_list:
             sigla = u.get("sigla_uc", u.get("sigla", ""))
-            sigla_prefix = f'[{_esc(sigla)}] ' if sigla else ""
+            sigla_prefix = f'{_esc(sigla)} — ' if sigla else ""
             option_parts.append(
                 f'<option value="{u["ocorrencia_id"]}" data-sigla="{_esc(sigla)}"'
                 f'{" selected" if u is uc_presel else ""}>'
