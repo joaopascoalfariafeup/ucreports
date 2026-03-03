@@ -2761,18 +2761,18 @@ def preview(job_id: str):
 
     aulas_sem_sumario = payload.get("aulas_sem_sumario", [])
     if aulas_sem_sumario:
-        # Agrupar por turma para apresentação mais clara
-        turmas_map: dict[str, list[str]] = {}
+        # Agrupar por turma: mostrar apenas contagem
+        turmas_map: dict[str, int] = {}
         for a in aulas_sem_sumario:
             chave = f"{a['turma']} ({a['tipo_aula']})" if a.get("tipo_aula") else a["turma"]
-            turmas_map.setdefault(chave, []).append(f"Aula {a['numero']} ({a['data']})")
+            turmas_map[chave] = turmas_map.get(chave, 0) + 1
         itens_sums = "".join(
-            f"<li>{_esc(turma)}: <span class='muted'>{_esc(', '.join(aulas))}</span></li>"
-            for turma, aulas in turmas_map.items()
+            f"<li>{n} aula(s) sem sumário da turma <span class='muted'>{_esc(turma)}</span></li>"
+            for turma, n in turmas_map.items()
         )
         aviso_sumarios = f"""
     <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
-      <b>⚠ {len(aulas_sem_sumario)} aula(s) sem sumário</b>
+      <b>⚠ Sumários por lançar</b>
       <ul style="margin:6px 0 0;padding-left:18px;">{itens_sums}</ul>
     </div>"""
     else:
