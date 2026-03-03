@@ -29,6 +29,8 @@ import urllib.request as _urllib_req
 from urllib.parse import urlparse
 
 from flask import Flask, request, session as flask_session, redirect, url_for, Response, abort, send_file
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from sigarra import SigarraSession, load_env
 from logger import AuditoriaLogger
@@ -42,6 +44,14 @@ load_env()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("WEB_SECRET_KEY") or secrets.token_hex(32)
+
+_limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],          # sem limite global — só nos endpoints específicos
+    storage_uri="memory://",
+)
+
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
@@ -1833,6 +1843,7 @@ def privacidade():
 
 
 @app.post("/login")
+@_limiter.limit("10 per minute; 30 per hour")
 def login_post():
     _require_csrf()
     login = request.form.get("login", "").strip()
@@ -2356,7 +2367,7 @@ def start_job():
     llm_choice = request.form.get("llm_choice", "").strip()
     llm_modelo_cond = request.form.get("llm_modelo_condensacao", "").strip()
     verb = WEB_VERBOSIDADE
-    if not oc_id:
+    if not oc_id or not re.fullmatch(r'\d{1,10}', oc_id):
         return redirect(url_for("ucs"))
 
     # Novo formato simplificado: "provider::modelo"

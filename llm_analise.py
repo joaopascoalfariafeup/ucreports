@@ -70,7 +70,7 @@ def _default_modelo_condensacao_por_provider(provider: str) -> str:
 
 
 def _garantir_api_key(provider: str):
-    """Garante API key do provider; pede no terminal se necessário."""
+    """Verifica que a API key do provider está configurada; levanta exceção caso contrário."""
     if provider == "openai":
         env_key = "OPENAI_API_KEY"
     elif provider == "iaedu":
@@ -80,8 +80,10 @@ def _garantir_api_key(provider: str):
 
     key = os.environ.get(env_key, "").strip()
     if not key:
-        key = getpass.getpass(f"{env_key}: ")
-        os.environ[env_key] = key
+        raise RuntimeError(
+            f"Variável de ambiente {env_key} não configurada. "
+            f"Defina-a em .env antes de iniciar o servidor."
+        )
 
 
 def _is_retryable_llm_error(exc: Exception) -> bool:

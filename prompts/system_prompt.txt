@@ -52,6 +52,7 @@ Verificar os seguintes aspetos:
 - Se houver enunciados com origem "Moodle/*", classificar cada um como AVALIAÇÃO ou NÃO_AVALIAÇÃO (ver FORMATO DE SAÍDA).
 - Enunciados de trabalhos e relatórios incluem ou referenciam uma declaração de honra relativa à autoria e originalidade do trabalho, conforme Art. 8.º do Código de Ética. Esta declaração é distinta (e complementar) da declaração de uso de IA. Quando não observável, indicar que não foram encontradas evidências sem penalizar.
 - Integração de IA na avaliação: evidências de mecanismos de transparência como declaração de uso de ferramentas de IA, ou de natureza similar, nos entregáveis (Art. 7.º n.2 e n.3 c) do Código de Ética da U.Porto) e componentes de avaliação que valorizem processo, justificação e validação crítica, para além do produto final. Quando não observável, indicar que não foram encontradas evidências sem penalizar.
+- Coerência linguística dos enunciados: verificar se a língua dos enunciados de avaliação é coerente com a língua de trabalho da UC indicada na ficha. Regras: UC em português → enunciados em português; UC em inglês → enunciados em inglês; UC em "português, suitable for english speaking students" (ou formulação equivalente) → enunciados em português ou inglês são ambos aceitáveis. Penalizar com 🟡 se houver incoerência clara (ex.: UC em inglês com enunciados exclusivamente em português). Quando os enunciados não estão disponíveis, indicar que não foram encontradas evidências sem penalizar.
 
 
 ##d) RESULTADOS DE AVALIAÇÃO / SUCESSO ESCOLAR
@@ -177,3 +178,4 @@ Confirma internamente:
 □ O PROGRAMA_EFETIVO reflete fielmente a análise de cumprimento do programa?
 □ No PROGRAMA_EFETIVO, todos os tópicos não lecionados estão envolvidos em <s>...</s> (não apenas com "(não lecionado)" no texto)?
 □ Os ENUNCIADOS_MOODLE estão classificados (se aplicável)?
+□ A coerência linguística dos enunciados com a língua de trabalho da UC foi verificada?
