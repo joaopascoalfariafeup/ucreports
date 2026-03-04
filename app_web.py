@@ -2085,7 +2085,19 @@ def login_federado_relay():
               <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
             </div>
             """)
-        # Verificar que a sessão SIGARRA resultante dá acesso a páginas privadas.
+        # codigo_pessoal é extraído da página inicial do SIGARRA após auth.
+        # Se for None, a sessão não estabeleceu acesso real ao SIGARRA.
+        if not sess.codigo_pessoal:
+            with _FED_STATES_LOCK:
+                _FED_STATES.pop(token, None)
+            return _page("Autenticação Federada UP", f"""
+            <div class="card">
+              <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
+              <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
+              <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
+            </div>
+            """)
+        # Verificar que a sessão dá acesso a páginas privadas.
         # vig_geral.docentes_vigilancias_list retorna HTTP 200 com "Não tem permissões"
         # no corpo quando a sessão é inválida (ex: fluxo de consentimento com wayf.up.pt).
         if sess.codigo_pessoal:
