@@ -2790,9 +2790,9 @@ def preview(job_id: str):
             f"<li>{_esc(turma)}: <span class='muted'>{n} aula(s) sem sumário</span></li>"
             for turma, n in turmas_map.items()
         )
-        # Sugestões editáveis (só as que têm std_id para submissão programática)
+        # Sugestões editáveis: apenas aulas com sugestão inferida E std_id para submissão
         sugestoes_html = ""
-        sugs_com_std = [s for s in sumarios_sugeridos if s.get("std_id")]
+        sugs_com_std = [s for s in sumarios_sugeridos if s.get("std_id") and s.get("sugestao")]
         if sugs_com_std:
             linhas = []
             for s in sugs_com_std:
