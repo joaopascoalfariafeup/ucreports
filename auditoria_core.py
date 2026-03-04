@@ -478,7 +478,8 @@ def analisar_uc(
 
     # RGPD: filtrar enunciados com possíveis dados pessoais antes de enviar para LLM
     enunciados_excluidos_rgpd: list[dict] = []
-    if enunciados:
+    _rgpd_filtro = os.environ.get("WEB_RGPD_FILTRO", "exclude").strip().lower()
+    if _rgpd_filtro == "exclude" and enunciados:
         limpos = []
         for e in enunciados:
             suspeito, motivos = _verificar_dados_pessoais(e["pdf_bytes"])
