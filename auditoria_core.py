@@ -349,9 +349,12 @@ def analisar_uc(
     prev_oc_id = None
     prev_ano_letivo = None
     if ficha.get("ucurr_id"):
-        prev = extrair_ocorrencia_anterior(oc_id, ficha["ucurr_id"], sessao)
-        if prev:
-            prev_oc_id, prev_ano_letivo = prev
+        try:
+            prev = extrair_ocorrencia_anterior(oc_id, ficha["ucurr_id"], sessao)
+            if prev:
+                prev_oc_id, prev_ano_letivo = prev
+        except Exception as e:
+            log.fase(f"  ⚠ Ocorrência anterior: {type(e).__name__}: {e}")
     if prev_oc_id:
         ficha_msg = f"2 fichas extraídas: ocorrências {ano_letivo_corrente} e {prev_ano_letivo}"
     else:
@@ -368,14 +371,19 @@ def analisar_uc(
     # --- Sumários ---
     log.iniciar_fase("sumarios", "Extrair sumários...")
     _turmas_ignoradas: list[str] = []
-    sums = extrair_sumarios(oc_id, sessao, log._verbosidade, turmas_ignoradas=_turmas_ignoradas)
-    turmas = {s["turma"] for s in sums}
-    _fase_msg = f"{len(sums)} sumários extraídos" + (f" de {len(turmas)} turma(s)" if turmas else "")
+    try:
+        sums = extrair_sumarios(oc_id, sessao, log._verbosidade, turmas_ignoradas=_turmas_ignoradas)
+    except Exception as e:
+        log.concluir_fase("sumarios", f"Erro ao extrair sumários: {type(e).__name__}: {e}", ok=False)
+        sums = []
+    else:
+        turmas = {s["turma"] for s in sums}
+        _fase_msg = f"{len(sums)} sumários extraídos" + (f" de {len(turmas)} turma(s)" if turmas else "")
+        if _turmas_ignoradas:
+            _fase_msg += f"; sem acesso a: {', '.join(_turmas_ignoradas)}"
+        log.concluir_fase("sumarios", _fase_msg)
     if _turmas_ignoradas:
-        _fase_msg += f"; sem permissão para {len(_turmas_ignoradas)} turma(s): {', '.join(_turmas_ignoradas)}"
-    log.concluir_fase("sumarios", _fase_msg)
-    if _turmas_ignoradas:
-        log.fase(f"  ⚠ UC partilhada entre docentes: sumários de {', '.join(_turmas_ignoradas)} não acessíveis com esta sessão")
+        log.fase(f"  ⚠ Sumários não acessíveis: {', '.join(_turmas_ignoradas)}")
 
     aulas_sem_sumario: list[dict] = []
     if not sums:

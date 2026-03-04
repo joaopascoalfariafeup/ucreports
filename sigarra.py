@@ -826,7 +826,16 @@ def extrair_sumarios(
         raise PermissionError("É necessário autenticar antes de aceder aos sumários.")
 
     url = SIGARRA_SUMARIOS_URL.format(ocorrencia_id)
-    html = sessao.fetch_html(url)
+    try:
+        html = sessao.fetch_html(url)
+    except PermissionError as e:
+        if turmas_ignoradas is not None:
+            turmas_ignoradas.append(f"(todas — {e})")
+        return []
+    except Exception as e:
+        if turmas_ignoradas is not None:
+            turmas_ignoradas.append(f"(todas — {type(e).__name__}: {e})")
+        return []
     turmas = _extrair_turmas(html)
 
     if not turmas:
