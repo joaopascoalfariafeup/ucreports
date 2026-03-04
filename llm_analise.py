@@ -1333,7 +1333,7 @@ Responde APENAS com JSON válido, sem texto adicional:
             user_text=user_text,
             max_tokens=1024,
         )
-        texto = resp.get("content", "").strip()
+        texto = resp.get("text", "").strip()
         # Remover possível markdown ```json ... ```
         texto = re.sub(r'^```(?:json)?\s*', '', texto)
         texto = re.sub(r'\s*```$', '', texto)
