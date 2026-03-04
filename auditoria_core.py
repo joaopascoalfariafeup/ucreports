@@ -363,15 +363,19 @@ def analisar_uc(
     log.concluir_fase("ficha", ficha_msg)
 
     # --- Verificação antecipada de sessão SIGARRA ---
-    # Testa uma página privada antes do LLM para falhar depressa se a sessão é inválida.
+    # Usa o portal Moodle do próprio utilizador: requer auth e deve sempre dar 200.
+    # Qualquer PermissionError (401 ou 403) indica sessão inválida/incompleta.
+    _check_url = (
+        f"{SIGARRA_BASE}/moodle_portal.go_moodle_portal_up?p_codigo={sessao.codigo_pessoal}"
+        if sessao.codigo_pessoal
+        else f"{SIGARRA_BASE}/sumarios_geral.ver?pv_ocorrencia_id={oc_id}"
+    )
     try:
-        sessao.fetch_html(f"{SIGARRA_BASE}/sumarios_geral.ver?pv_ocorrencia_id={oc_id}")
+        sessao.fetch_html(_check_url)
     except PermissionError as e:
-        if "401" in str(e):
-            raise PermissionError(
-                "Sessão SIGARRA inválida — faça logout e login novamente."
-            ) from e
-        # 403: autenticado mas sem acesso a esta página (UC partilhada, etc.) — continuar
+        raise PermissionError(
+            "Sessão SIGARRA inválida — faça logout e login novamente."
+        ) from e
     except Exception:
         pass  # falha de rede ou outro erro transitório — não bloquear
 

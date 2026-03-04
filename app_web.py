@@ -2088,21 +2088,25 @@ def login_federado_relay():
         # Verificar que a sessão SIGARRA resultante dá acesso a páginas privadas.
         # autenticar_federado_completar pode "ter sucesso" (URL final em sigarra.up.pt)
         # mas os cookies não estabelecerem sessão autenticada (ex: após consentimento).
+        # Portal Moodle do utilizador: requer auth e deve sempre dar 200 (nunca 403).
+        _sess_check_url = (
+            f"https://sigarra.up.pt/feup/pt/moodle_portal.go_moodle_portal_up"
+            f"?p_codigo={sess.codigo_pessoal}"
+            if sess.codigo_pessoal
+            else "https://sigarra.up.pt/feup/pt/sumarios_geral.ver?pv_ocorrencia_id=1"
+        )
         try:
-            # sumarios_geral.ver devolve 401 se não autenticado, independentemente do oc_id
-            sess.fetch_html("https://sigarra.up.pt/feup/pt/sumarios_geral.ver?pv_ocorrencia_id=1")
-        except PermissionError as _pe:
-            if "401" in str(_pe):
-                with _FED_STATES_LOCK:
-                    _FED_STATES.pop(token, None)
-                return _page("Autenticação Federada UP", f"""
-                <div class="card">
-                  <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
-                  <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
-                  <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-                </div>
-                """)
-            # 403: autenticado mas sem acesso a esta página — OK
+            sess.fetch_html(_sess_check_url)
+        except PermissionError:
+            with _FED_STATES_LOCK:
+                _FED_STATES.pop(token, None)
+            return _page("Autenticação Federada UP", f"""
+            <div class="card">
+              <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
+              <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
+              <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
+            </div>
+            """)
         except Exception:
             pass  # erro de rede transitório — não bloquear o login
         with _FED_STATES_LOCK:
