@@ -24,6 +24,7 @@ import json
 import math
 import os
 import random
+import secrets
 from pathlib import Path
 import re
 import threading
@@ -1168,38 +1169,77 @@ def submeter_sumario(
     data_aula: str,       # YYYY-MM-DD
     cod_docente: str,
     sessao: SigarraSession,
-) -> bool:
+) -> None:
     """Submete um sumário para uma aula no SIGARRA.
 
     Faz primeiro GET ao formulário para extrair p_n_aula (plano do docente),
-    depois POST a sumarios_adm.sub_inserir.
-    Devolve True se o redireccionamento pós-POST for para sumarios_adm.inicio.
+    depois POST multipart/form-data a sumarios_adm.sub_inserir (igual ao browser).
+    O SIGARRA responde com 200 + JavaScript redirect; verifica sucesso no body.
+    Levanta ValueError se o body não contiver o redirect esperado.
     """
     # 1. GET do formulário para extrair p_n_aula
-    form_html = sessao.fetch_html(f"{SIGARRA_BASE}/sumarios_adm.inserir?pv_std_id={std_id}")
+    form_url = f"{SIGARRA_BASE}/sumarios_adm.inserir?pv_std_id={std_id}"
+    form_html = sessao.fetch_html(form_url)
     soup = BeautifulSoup(form_html, "html.parser")
     opt = soup.select_one("select[name='p_n_aula'] option[selected]")
     p_n_aula = opt["value"] if opt else ""
 
-    # 2. POST
-    post_data = {
-        "pv_std_id": std_id,
-        "p_cod_docente": cod_docente,
-        "p_sumario": texto,
-        "parr_turmas": std_id,
-        "parr_turmas_escolhidas": std_id,
-        "parr_efectiva": data_aula,
-        "p_n_aula": p_n_aula,
-        "pv_action": "Guardar",
-        "pv_visivel": "S",
-        "p_aula_tipo": std_id,
-    }
-    _, final_url = sessao._saml_request(
-        f"{SIGARRA_BASE}/sumarios_adm.sub_inserir",
-        post_data=post_data,
+    # 2. POST multipart/form-data — idêntico ao que o browser envia
+    fields = [
+        ("pv_std_id",              std_id),
+        ("p_cod_docente",          cod_docente),
+        ("p_sumario",              texto),
+        ("p_turma_chk",            "l_turmas"),
+        ("parr_turmas",            std_id),
+        ("parr_turmas_escolhidas", std_id),
+        ("parr_efectiva",          data_aula),
+        ("parr_nalunos",           ""),
+        ("p_n_aula",               p_n_aula),
+        ("p_planeamento",          ""),
+        ("pv_action",              "Guardar"),
+        ("pct_cont_id",            ""),
+        ("pct_conteudo",           ""),
+        ("pv_visivel",             "S"),
+        ("pv_grupo",               ""),
+        ("p_aula_tipo",            std_id),
+    ]
+    boundary = "WebKitFormBoundary" + secrets.token_hex(8)
+    parts = []
+    for name, value in fields:
+        parts.append(
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="{name}"\r\n'
+            f"\r\n"
+            f"{value}\r\n"
+        )
+    # Campo de ficheiro vazio (parr_name), exigido pelo formulário
+    parts.append(
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="parr_name"; filename=""\r\n'
+        f"Content-Type: application/octet-stream\r\n"
+        f"\r\n"
+        f"\r\n"
     )
-    if "sumarios_adm.inicio" not in final_url:
-        raise ValueError(f"redireccionamento inesperado para: {final_url!r}")
+    parts.append(f"--{boundary}--\r\n")
+    body = "".join(parts).encode("utf-8")
+
+    req = urllib.request.Request(
+        f"{SIGARRA_BASE}/sumarios_adm.sub_inserir",
+        data=body,
+        headers={
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "Referer": form_url,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+    )
+    resp = sessao._opener.open(req, timeout=30)
+    charset = resp.headers.get_content_charset() or "utf-8"
+    html_body = resp.read().decode(charset, errors="replace")
+
+    # O SIGARRA responde com 200 + JS redirect; sucesso se o body aponta para sumarios_adm.inicio
+    if "sumarios_adm.inicio" not in html_body:
+        raise ValueError(f"resposta inesperada do SIGARRA (sem redirect para sumarios_adm.inicio)")
 
 
 # ---------------------------------------------------------------------------
