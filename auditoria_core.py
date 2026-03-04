@@ -363,21 +363,20 @@ def analisar_uc(
     log.concluir_fase("ficha", ficha_msg)
 
     # --- Verificação antecipada de sessão SIGARRA ---
-    # Usa o portal Moodle do próprio utilizador: requer auth e deve sempre dar 200.
-    # Qualquer PermissionError (401 ou 403) indica sessão inválida/incompleta.
-    _check_url = (
-        f"{SIGARRA_BASE}/moodle_portal.go_moodle_portal_up?p_codigo={sessao.codigo_pessoal}"
-        if sessao.codigo_pessoal
-        else f"{SIGARRA_BASE}/sumarios_geral.ver?pv_ocorrencia_id={oc_id}"
-    )
-    try:
-        sessao.fetch_html(_check_url)
-    except PermissionError as e:
-        raise PermissionError(
-            "Sessão SIGARRA inválida — faça logout e login novamente."
-        ) from e
-    except Exception:
-        pass  # falha de rede ou outro erro transitório — não bloquear
+    # vig_geral.docentes_vigilancias_list retorna HTTP 200 com "Não tem permissões"
+    # no corpo quando a sessão é inválida (autenticação federada com consentimento quebrado).
+    if sessao.codigo_pessoal:
+        try:
+            _check_html = sessao.fetch_html(
+                f"{SIGARRA_BASE}/vig_geral.docentes_vigilancias_list"
+                f"?p_func_codigo={sessao.codigo_pessoal}"
+            )
+            if "Não tem permissões" in _check_html:
+                raise PermissionError("Sessão SIGARRA inválida — faça logout e login novamente.")
+        except PermissionError:
+            raise
+        except Exception:
+            pass  # falha de rede ou outro erro transitório — não bloquear
 
     log.info(f"\n--- Programa ---\n")
     log.info(ficha["programa"])

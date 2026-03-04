@@ -2086,29 +2086,36 @@ def login_federado_relay():
             </div>
             """)
         # Verificar que a sessão SIGARRA resultante dá acesso a páginas privadas.
-        # autenticar_federado_completar pode "ter sucesso" (URL final em sigarra.up.pt)
-        # mas os cookies não estabelecerem sessão autenticada (ex: após consentimento).
-        # Portal Moodle do utilizador: requer auth e deve sempre dar 200 (nunca 403).
-        _sess_check_url = (
-            f"https://sigarra.up.pt/feup/pt/moodle_portal.go_moodle_portal_up"
-            f"?p_codigo={sess.codigo_pessoal}"
-            if sess.codigo_pessoal
-            else "https://sigarra.up.pt/feup/pt/sumarios_geral.ver?pv_ocorrencia_id=1"
-        )
-        try:
-            sess.fetch_html(_sess_check_url)
-        except PermissionError:
-            with _FED_STATES_LOCK:
-                _FED_STATES.pop(token, None)
-            return _page("Autenticação Federada UP", f"""
-            <div class="card">
-              <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
-              <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
-              <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-            </div>
-            """)
-        except Exception:
-            pass  # erro de rede transitório — não bloquear o login
+        # vig_geral.docentes_vigilancias_list retorna HTTP 200 com "Não tem permissões"
+        # no corpo quando a sessão é inválida (ex: fluxo de consentimento com wayf.up.pt).
+        if sess.codigo_pessoal:
+            try:
+                _check_html = sess.fetch_html(
+                    f"https://sigarra.up.pt/feup/pt/vig_geral.docentes_vigilancias_list"
+                    f"?p_func_codigo={sess.codigo_pessoal}"
+                )
+                if "Não tem permissões" in _check_html:
+                    with _FED_STATES_LOCK:
+                        _FED_STATES.pop(token, None)
+                    return _page("Autenticação Federada UP", f"""
+                    <div class="card">
+                      <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
+                      <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
+                      <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
+                    </div>
+                    """)
+            except PermissionError:
+                with _FED_STATES_LOCK:
+                    _FED_STATES.pop(token, None)
+                return _page("Autenticação Federada UP", f"""
+                <div class="card">
+                  <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
+                  <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
+                  <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
+                </div>
+                """)
+            except Exception:
+                pass  # erro de rede transitório — não bloquear o login
         with _FED_STATES_LOCK:
             _FED_STATES.pop(token, None)
         _set_sigarra_session(sess)
