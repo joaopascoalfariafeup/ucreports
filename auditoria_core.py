@@ -362,6 +362,19 @@ def analisar_uc(
         ficha_msg = f"1 ficha extraída: ocorrência {ano_letivo_corrente}, sem ocorrência anterior identificada"
     log.concluir_fase("ficha", ficha_msg)
 
+    # --- Verificação antecipada de sessão SIGARRA ---
+    # Testa uma página privada antes do LLM para falhar depressa se a sessão é inválida.
+    try:
+        sessao.fetch_html(f"{SIGARRA_BASE}/sumarios_geral.ver?pv_ocorrencia_id={oc_id}")
+    except PermissionError as e:
+        if "401" in str(e):
+            raise PermissionError(
+                "Sessão SIGARRA inválida — faça logout e login novamente."
+            ) from e
+        # 403: autenticado mas sem acesso a esta página (UC partilhada, etc.) — continuar
+    except Exception:
+        pass  # falha de rede ou outro erro transitório — não bloquear
+
     log.info(f"\n--- Programa ---\n")
     log.info(ficha["programa"])
     log.info(f"\n--- Objetivos ---\n")
