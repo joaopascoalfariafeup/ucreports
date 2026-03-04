@@ -1310,7 +1310,8 @@ Aulas sem sumário:
 {chr(10).join(linhas_aulas)}
 
 Para cada aula listada, identifica a semana do Moodle com data mais próxima \
-e sugere um sumário em português (1-2 frases concisas, sem nomes de estudantes). \
+e sugere um sumário (1-2 frases concisas, sem nomes de estudantes) \
+na mesma língua em que os conteúdos do Moodle estão escritos. \
 Se não houver conteúdo Moodle correspondente, deixa a sugestão vazia ("").
 
 Responde APENAS com JSON válido, sem texto adicional:
@@ -1321,8 +1322,8 @@ Responde APENAS com JSON válido, sem texto adicional:
 
     system = (
         "És um assistente que ajuda docentes universitários a preencher sumários de aulas "
-        "no sistema SIGARRA. Geras sugestões breves e factuais em português europeu, "
-        "baseadas nos conteúdos do Moodle da UC."
+        "no sistema SIGARRA. Geras sugestões breves e factuais na língua dos conteúdos do Moodle, "
+        "baseadas nesses conteúdos."
     )
 
     try:
