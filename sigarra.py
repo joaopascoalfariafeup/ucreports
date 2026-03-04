@@ -1198,7 +1198,8 @@ def submeter_sumario(
         f"{SIGARRA_BASE}/sumarios_adm.sub_inserir",
         post_data=post_data,
     )
-    return "sumarios_adm.inicio" in final_url
+    if "sumarios_adm.inicio" not in final_url:
+        raise ValueError(f"redireccionamento inesperado para: {final_url!r}")
 
 
 # ---------------------------------------------------------------------------
