@@ -768,8 +768,10 @@ def analisar_uc(
 
     log.iniciar_fase("relatorio", "Preparar relatório...")
 
-    # Extrair formulário e preencher campos
+    # Extrair formulário — pode falhar por falta de permissões (docente não regente)
     log.info("  A extrair formulário do relatório...")
+    campos = {}
+    sem_acesso_formulario = False
     try:
         campos = extrair_form_relatorio(
             oc_id,
@@ -777,59 +779,65 @@ def analisar_uc(
             output_dir=pasta_uc,
             verbosidade=log._verbosidade,
         )
-
-        # Calcular horas previstas e efetivas
         log.info("  A calcular horas previstas e efetivas...")
         calcular_horas_relatorio(campos, sums)
+    except PermissionError as e:
+        sem_acesso_formulario = True
+        log.fase(f"  ⚠ Sem permissão para aceder ao formulário do relatório — a submissão não estará disponível ({e})")
+    except Exception as e:
+        sem_acesso_formulario = True
+        log.fase(f"  ⚠ Erro ao extrair formulário do relatório: {type(e).__name__}: {e}")
 
-        # Programa efetivamente lecionado
-        if programa_efetivo:
-            campos["pv_rel_programa"] = programa_efetivo
+    # Preencher campos com a análise LLM (mesmo se formulário inacessível)
+    if programa_efetivo:
+        campos["pv_rel_programa"] = programa_efetivo
+        if not sem_acesso_formulario:
             log.info(f"  Programa efetivo preenchido ({len(programa_efetivo)} chars)")
+    campos["pv_rel_coment_res"] = resultados_texto
+    campos["pv_rel_coment_func"] = funcionamento_texto
 
-        # Comentários - resultados
-        campos["pv_rel_coment_res"] = resultados_texto 
+    # Guardar preview (sempre, mesmo sem acesso ao formulário)
+    preview_payload = {
+        "ocorrencia_id": oc_id,
+        "nome_uc": ficha.get("nome_uc", ""),
+        "sem_acesso_formulario": sem_acesso_formulario,
+        "enunciados_excluidos_rgpd": enunciados_excluidos_rgpd,
+        "aulas_sem_sumario": aulas_sem_sumario,
+        "sumarios_sugeridos": sumarios_sugeridos,
+        "pautas_classificacoes_pendentes": pautas_classificacoes_pendentes,
+        "programa_efetivo": programa_efetivo or "",
+        "comentarios_resultados": campos.get("pv_rel_coment_res", ""),
+        "comentarios_funcionamento": campos.get("pv_rel_coment_func", ""),
+        "campos": campos,
+        "enunciados_para_upload": [
+            {
+                "nome": e.get("nome", ""),
+                "descricao": e.get("descricao", e.get("nome", "")),
+                "epoca": (
+                    str(e.get("epoca", "")).strip()
+                    or inferir_epoca_enunciado(str(e.get("nome", "")))
+                ),
+            }
+            for e in enunciados_para_upload
+        ],
+    }
+    preview_path = pasta_uc / "preview_payload.json"
+    preview_tmp = preview_path.with_suffix(".tmp")
+    preview_tmp.write_text(
+        json.dumps(preview_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    preview_tmp.replace(preview_path)
 
-        # Comentários - funcionamento 
-        campos["pv_rel_coment_func"] = funcionamento_texto 
+    if sem_acesso_formulario:
+        log.concluir_fase("relatorio", "Análise concluída (sem permissão para submeter relatório)", ok=False)
+        return pasta_uc
 
-        preview_payload = {
-            "ocorrencia_id": oc_id,
-            "nome_uc": ficha.get("nome_uc", ""),
-            "enunciados_excluidos_rgpd": enunciados_excluidos_rgpd,
-            "aulas_sem_sumario": aulas_sem_sumario,
-            "sumarios_sugeridos": sumarios_sugeridos,
-            "pautas_classificacoes_pendentes": pautas_classificacoes_pendentes,
-            "programa_efetivo": programa_efetivo or "",
-            "comentarios_resultados": campos.get("pv_rel_coment_res", ""),
-            "comentarios_funcionamento": campos.get("pv_rel_coment_func", ""),
-            "campos": campos,
-            "enunciados_para_upload": [
-                {
-                    "nome": e.get("nome", ""),
-                    "descricao": e.get("descricao", e.get("nome", "")),
-                    "epoca": (
-                        str(e.get("epoca", "")).strip()
-                        or inferir_epoca_enunciado(str(e.get("nome", "")))
-                    ),
-                }
-                for e in enunciados_para_upload
-            ],
-        }
-        preview_path = pasta_uc / "preview_payload.json"
-        # Escrita atómica: write+rename para evitar leituras parciais
-        preview_tmp = preview_path.with_suffix(".tmp")
-        preview_tmp.write_text(
-            json.dumps(preview_payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        preview_tmp.replace(preview_path)
-        log.info(f"  Preview guardado em: {preview_path}")
+    if not submeter:
+        log.concluir_fase("relatorio", "Relatório pronto (sem submissão)")
+        return pasta_uc
 
-        if not submeter:
-            log.concluir_fase("relatorio", "Relatório pronto (sem submissão)")
-            return pasta_uc
-
+    try:
         ok = _submeter_campos_relatorio(
             sessao=sessao,
             oc_id=oc_id,
@@ -842,10 +850,9 @@ def analisar_uc(
             log.concluir_fase("relatorio", "Relatório submetido com sucesso!")
         else:
             log.concluir_fase("relatorio", "AVISO: A submissão pode não ter sido bem-sucedida.", ok=False)
-
     except (ValueError, PermissionError) as e:
-        log.erro(f"  Erro ao preencher relatório: {e}")
-        log.concluir_fase("relatorio", "Preenchimento do relatório falhou.", ok=False)
+        log.erro(f"  Erro ao submeter relatório: {e}")
+        log.concluir_fase("relatorio", "Submissão do relatório falhou.", ok=False)
 
     return pasta_uc
 

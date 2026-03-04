@@ -2763,7 +2763,7 @@ def preview(job_id: str):
         payload.get("sigla_uc", "") or job.uc_sigla,
         ano_letivo_label,
     )
-    can_submit = job.done and job.ok and job.action == "preview"
+    can_submit = job.done and job.ok and job.action == "preview" and not payload.get("sem_acesso_formulario")
 
     excluidos_rgpd = payload.get("enunciados_excluidos_rgpd", [])
     if excluidos_rgpd:
