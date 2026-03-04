@@ -302,7 +302,6 @@ def submeter_preview_uc(
                 submeter_sumario(std_id, texto, s.get("data_iso", ""),
                                  sessao.codigo_pessoal or "", sessao)
                 n_ok += 1
-                log.fase(f"  ✓ Sumário da {aula_label} submetido")
             except Exception as e:
                 n_falha += 1
                 log.fase(f"  ⚠ Sumário da {aula_label}: {e}")
