@@ -1953,6 +1953,14 @@ def _proxy_saml_html(html: str, relay_url: str, token: str) -> str:
         r'\1 disabled title="Não disponível nesta interface"\2',
         html, flags=re.IGNORECASE,
     )
+    # Desativar checkbox "Revogar aprovação anterior" — a revogação corre no servidor
+    # com cookies da sessão proxy (não do browser), deixando o browser em estado
+    # inconsistente e corrompendo sessões SIGARRA subsequentes.
+    html = re.sub(
+        r'(<input\b[^>]*\bname=["\']_shib_idp_revokeConsent["\'][^>]*)',
+        r'\1 disabled title="Não disponível nesta interface"',
+        html, flags=re.IGNORECASE,
+    )
     # Injetar campo oculto com token antes de </form>
     html = html.replace('</form>', f'<input type="hidden" name="_fed_token" value="{token}"></form>', 1)
     return html
