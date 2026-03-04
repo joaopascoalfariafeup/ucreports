@@ -141,6 +141,9 @@ WEB_OUTPUT_RETENTION_HOURS = float(os.environ.get("WEB_OUTPUT_RETENTION_HOURS",
 ))
 WEB_OUTPUT_MAX_GB = float(os.environ.get("WEB_OUTPUT_MAX_GB", "5"))
 _REVIEW_ERROR_INJECTION = int(os.environ.get("REVIEW_ERROR_INJECTION", "0").strip() or "0")
+# Se 1 (default), lista de UCs restringe-se a UCs em que o docente é regente.
+# Se 0, todos os docentes da UC podem gerar relatório (útil para testes).
+_ACESSO_APENAS_REGENTE = os.environ.get("WEB_ACESSO_APENAS_REGENTE", "1").strip() != "0"
 _REVIEW_ERROR_COUNT = int(os.environ.get("REVIEW_ERROR_COUNT", "3"))
 _REVIEW_ERROR_TOLERANCE = int(os.environ.get("REVIEW_ERROR_TOLERANCE", "1"))
 WEB_MAX_USD_PER_USER_PER_MONTH = float(
@@ -2161,7 +2164,7 @@ def ucs():
                     doc_codigo=doc_codigo,
                     ano_letivo=ano_letivo or None,
                     incluir_meta=True,
-                    apenas_regente_docente=True,
+                    apenas_regente_docente=_ACESSO_APENAS_REGENTE,
                 )
                 ano_letivo_resolvido = (meta.get("ano_letivo_resolvido") or "").strip()
                 docente_nome = (meta.get("docente_nome") or "").strip()
@@ -2183,7 +2186,7 @@ def ucs():
                         doc_codigo=doc_codigo,
                         ano_letivo=ano_letivo,
                         incluir_meta=True,
-                        apenas_regente_docente=True,
+                        apenas_regente_docente=_ACESSO_APENAS_REGENTE,
                     )
                     ano_letivo_resolvido = (meta.get("ano_letivo_resolvido") or "").strip()
                     docente_nome = (meta.get("docente_nome") or "").strip()

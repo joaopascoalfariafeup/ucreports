@@ -1221,7 +1221,8 @@ def submeter_sumario(
         f"\r\n"
     )
     parts.append(f"--{boundary}--\r\n")
-    body = "".join(parts).encode("utf-8")
+    # SIGARRA usa ISO-8859-15; enviar UTF-8 causaria dupla-codificação de caracteres portugueses
+    body = "".join(parts).encode("iso-8859-15", errors="replace")
 
     req = urllib.request.Request(
         f"{SIGARRA_BASE}/sumarios_adm.sub_inserir",
