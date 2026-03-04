@@ -800,7 +800,12 @@ def _extrair_sumarios_lista(html: str) -> list[dict]:
     return sumarios
 
 
-def extrair_sumarios(ocorrencia_id: str, sessao: SigarraSession, verbosidade: int = 1) -> list[dict]:
+def extrair_sumarios(
+    ocorrencia_id: str,
+    sessao: SigarraSession,
+    verbosidade: int = 1,
+    turmas_ignoradas: list | None = None,
+) -> list[dict]:
     """Extrai os sumários de todas as turmas de uma UC.
 
     Requer sessão autenticada. Para cada turma, acede à página
@@ -810,6 +815,8 @@ def extrair_sumarios(ocorrencia_id: str, sessao: SigarraSession, verbosidade: in
         ocorrencia_id: Código da ocorrência da UC.
         sessao: Sessão autenticada no SIGARRA.
         verbosidade: Nível de detalhe na saída (0=quieto, 1=normal, 2=debug).
+        turmas_ignoradas: Lista opcional que é preenchida com os nomes das
+            turmas ignoradas por falta de permissão ou erro de rede.
 
     Returns:
         Lista de dicionários com chaves 'turma', 'tipo_aula', 'numero',
@@ -828,15 +835,30 @@ def extrair_sumarios(ocorrencia_id: str, sessao: SigarraSession, verbosidade: in
     todos_sumarios = []
 
     for turma in turmas:
+        label = f"{turma['turma']} ({turma['tipo_aula']})"
         if verbosidade >= 1:
-            print(f"  A extrair sumários da turma {turma['turma']} ({turma['tipo_aula']})...")
+            print(f"  A extrair sumários da turma {label}...")
         params = urllib.parse.urlencode({
             "pv_ocorrencia_id": ocorrencia_id,
             "pv_tipo_aula": turma["tipo_aula"],
             "pv_turma_id": turma["turma_id"],
         })
         lista_url = f"{SIGARRA_SUMARIOS_LISTA_URL}?{params}"
-        html_lista = sessao.fetch_html(lista_url)
+        try:
+            html_lista = sessao.fetch_html(lista_url)
+        except PermissionError:
+            # Normal em UCs partilhadas entre docentes: cada um só acede às suas turmas
+            if verbosidade >= 1:
+                print(f"  ⚠ Sem permissão para {label} — turma ignorada")
+            if turmas_ignoradas is not None:
+                turmas_ignoradas.append(label)
+            continue
+        except Exception as e:
+            if verbosidade >= 1:
+                print(f"  ⚠ Erro ao extrair sumários de {label}: {e} — turma ignorada")
+            if turmas_ignoradas is not None:
+                turmas_ignoradas.append(label)
+            continue
         sums = _extrair_sumarios_lista(html_lista)
         for s in sums:
             s["turma"] = turma["turma"]

@@ -343,9 +343,15 @@ def analisar_uc(
 
     # --- Sumários ---
     log.iniciar_fase("sumarios", "Extrair sumários...")
-    sums = extrair_sumarios(oc_id, sessao, log._verbosidade)
+    _turmas_ignoradas: list[str] = []
+    sums = extrair_sumarios(oc_id, sessao, log._verbosidade, turmas_ignoradas=_turmas_ignoradas)
     turmas = {s["turma"] for s in sums}
-    log.concluir_fase("sumarios", f"{len(sums)} sumários extraídos" + (f" de {len(turmas)} turma(s)" if turmas else ""))
+    _fase_msg = f"{len(sums)} sumários extraídos" + (f" de {len(turmas)} turma(s)" if turmas else "")
+    if _turmas_ignoradas:
+        _fase_msg += f"; sem permissão para {len(_turmas_ignoradas)} turma(s): {', '.join(_turmas_ignoradas)}"
+    log.concluir_fase("sumarios", _fase_msg)
+    if _turmas_ignoradas:
+        log.fase(f"  ⚠ UC partilhada entre docentes: sumários de {', '.join(_turmas_ignoradas)} não acessíveis com esta sessão")
 
     aulas_sem_sumario: list[dict] = []
     if not sums:
@@ -383,8 +389,13 @@ def analisar_uc(
                     "data_iso": adm.get("data", ""),   # YYYY-MM-DD para o POST
                     "sugestao": "",
                 })
+        except PermissionError:
+            # Normal em UCs partilhadas: docente sem acesso admin aos sumários de outras turmas
+            log.fase(f"  ⚠ Sem permissão para aceder à administração de sumários (sumarios_adm.inicio) — submissão programática de sumários não disponível para esta UC")
+            aulas_sem_sumario_sem_std = [f"aula {a['numero']} ({a['turma']})" for a in aulas_sem_sumario]
+            log.fase(f"    Aulas afectadas: {', '.join(aulas_sem_sumario_sem_std)}")
         except Exception as e:
-            log.aviso(f"Não foi possível obter std_ids das aulas ({e})")
+            log.fase(f"  ⚠ Erro ao obter std_ids para submissão de sumários: {type(e).__name__}: {e}")
 
     # --- Conteúdos do Moodle ---
     conteudos_moodle = None

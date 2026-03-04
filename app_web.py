@@ -2799,10 +2799,10 @@ def preview(job_id: str):
                 linhas.append(f"""
       <div style="margin:8px 0 4px;">
         <label style="display:flex;align-items:baseline;gap:8px;font-size:0.92em;">
-          <input type="checkbox" name="sum_check_{std_id}" {checked} style="margin-top:2px;flex-shrink:0;">
+          <input type="checkbox" name="sum_check_{std_id}" {checked} form="confirm-form" style="margin-top:2px;flex-shrink:0;">
           <span>{label}</span>
         </label>
-        <textarea name="sum_texto_{std_id}" rows="2"
+        <textarea name="sum_texto_{std_id}" rows="2" form="confirm-form"
           style="width:100%;margin-top:4px;font-size:0.9em;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;resize:vertical;"
           >{sugestao}</textarea>
       </div>""")
