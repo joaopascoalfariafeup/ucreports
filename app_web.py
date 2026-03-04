@@ -36,7 +36,7 @@ from sigarra import SigarraSession, load_env
 from logger import AuditoriaLogger
 from auditoria_core import analisar_uc, submeter_preview_uc, _SCRIPT_DIR
 from sigarra import extrair_ocorrencias_servico_docente
-from sigarra import extrair_ficha_uc, submeter_sumario
+from sigarra import extrair_ficha_uc
 
 
 # Carregar .env antes de ler variáveis WEB_* no arranque do módulo
@@ -2610,7 +2610,8 @@ def confirm_submit(job_id: str):
         payload.pop("_resultados_com_erros", None)
         payload.pop("_funcionamento_com_erros", None)
 
-    # Submeter sumários selecionados pelo utilizador
+    # Registar sumários selecionados para submissão no job de streaming
+    sumarios_a_submeter = []
     for s in payload.get("sumarios_sugeridos", []):
         std_id = s.get("std_id", "")
         if not std_id:
@@ -2618,11 +2619,15 @@ def confirm_submit(job_id: str):
         if request.form.get(f"sum_check_{std_id}"):
             texto = request.form.get(f"sum_texto_{std_id}", "").strip()
             if texto:
-                try:
-                    submeter_sumario(std_id, texto, s.get("data_iso", ""),
-                                     sess.codigo_pessoal or "", sess)
-                except Exception:
-                    pass  # não bloqueia a submissão do relatório
+                sumarios_a_submeter.append({
+                    "std_id": std_id,
+                    "texto": texto,
+                    "data_iso": s.get("data_iso", ""),
+                    "turma": s.get("turma", ""),
+                    "numero": s.get("numero", ""),
+                })
+    if sumarios_a_submeter:
+        payload["sumarios_a_submeter"] = sumarios_a_submeter
 
     # Guardar payload atualizado
     try:

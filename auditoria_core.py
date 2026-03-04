@@ -285,6 +285,30 @@ def submeter_preview_uc(
         campos=campos,
         enunciados_para_upload=enunciados_para_upload,
     )
+
+    # Submeter sumários selecionados pelo utilizador
+    sumarios_a_submeter = payload.get("sumarios_a_submeter", [])
+    n_ok = 0
+    n_falha = 0
+    for s in sumarios_a_submeter:
+        std_id = s.get("std_id", "")
+        texto = s.get("texto", "").strip()
+        if not std_id or not texto:
+            continue
+        aula_label = f"aula {s.get('numero', '?')} ({s.get('turma', '?')})"
+        try:
+            ok = submeter_sumario(std_id, texto, s.get("data_iso", ""),
+                                  sessao.codigo_pessoal or "", sessao)
+            if ok:
+                n_ok += 1
+                log.fase(f"  ✓ Sumário da {aula_label} submetido")
+            else:
+                n_falha += 1
+                log.fase(f"  ⚠ Sumário da {aula_label}: SIGARRA não confirmou a submissão (redireccionamento inesperado)")
+        except Exception as e:
+            n_falha += 1
+            log.fase(f"  ⚠ Sumário da {aula_label}: erro — {e}")
+
     return True
 
 
