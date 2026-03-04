@@ -269,7 +269,7 @@ def extrair_conteudos_moodle(course_url: str, sessao: SigarraSession,
         # Descrição da secção
         descricao = ""
         desc_match = re.search(
-            r'class="[^"]*\bsummary\b[^"]*"[^>]*>(.+)',
+            r'class="[^"]*\bsummary[^"]*"[^>]*>(.+)',
             sec_html, re.DOTALL,
         )
         if desc_match:
