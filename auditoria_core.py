@@ -289,7 +289,7 @@ def submeter_preview_uc(
     # Submeter sumários selecionados pelo utilizador
     sumarios_a_submeter = payload.get("sumarios_a_submeter", [])
     if sumarios_a_submeter:
-        log.iniciar_fase("sumarios_sub", "Submeter sumário(s) no SIGARRA...")
+        log.iniciar_fase("sumarios_sub", "A submeter sumário(s) no SIGARRA...")
         n_ok = 0
         n_falha = 0
         for s in sumarios_a_submeter:
