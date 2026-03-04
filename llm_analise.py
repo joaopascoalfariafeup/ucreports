@@ -1263,6 +1263,90 @@ com todas as secções delimitadas indicadas no system prompt.\
 
 
 
+def inferir_sumarios_moodle(
+    aulas: list[dict],
+    conteudos_moodle: dict,
+    ficha: dict,
+    provider: str,
+    modelo: str,
+    logger=None,
+) -> list[dict]:
+    """Sugere sumários para aulas sem sumário com base nos conteúdos do Moodle.
+
+    Para cada aula em `aulas` (com campos 'numero' e 'data_iso'), tenta
+    identificar a semana Moodle correspondente pela data e gera um sumário
+    breve em português (1-2 frases).
+
+    Devolve a lista `aulas` com campo 'sugestao' preenchido (string vazia
+    se não foi possível inferir).
+    """
+    if not aulas or not conteudos_moodle or not conteudos_moodle.get("seccoes"):
+        return aulas
+
+    # Construir resumo do Moodle para o prompt
+    linhas_moodle = []
+    for sec in conteudos_moodle["seccoes"]:
+        nome_sec = sec.get("nome", "")
+        if nome_sec:
+            linhas_moodle.append(f"- {nome_sec}")
+            if sec.get("descricao"):
+                linhas_moodle.append(f"  Descrição: {sec['descricao']}")
+            for act in sec.get("atividades", []):
+                linhas_moodle.append(f"  [{act['tipo']}] {act['nome']}")
+
+    linhas_aulas = [
+        f"- Aula {a['numero']} — {a.get('data_iso', '')} (turma {a.get('turma', '')})"
+        for a in aulas
+    ]
+
+    nome_uc = ficha.get("nome_uc", "")
+    user_text = f"""\
+UC: {nome_uc}
+
+Conteúdos do Moodle (por semana):
+{chr(10).join(linhas_moodle)}
+
+Aulas sem sumário:
+{chr(10).join(linhas_aulas)}
+
+Para cada aula listada, identifica a semana do Moodle com data mais próxima \
+e sugere um sumário em português (1-2 frases concisas, sem nomes de estudantes). \
+Se não houver conteúdo Moodle correspondente, deixa a sugestão vazia ("").
+
+Responde APENAS com JSON válido, sem texto adicional:
+[
+  {{"numero": <int>, "sugestao": "<texto ou vazio>"}},
+  ...
+]"""
+
+    system = (
+        "És um assistente que ajuda docentes universitários a preencher sumários de aulas "
+        "no sistema SIGARRA. Geras sugestões breves e factuais em português europeu, "
+        "baseadas nos conteúdos do Moodle da UC."
+    )
+
+    try:
+        resp = _call_text_only_llm(
+            provider=provider,
+            model=modelo,
+            system=system,
+            user_text=user_text,
+            max_tokens=1024,
+        )
+        texto = resp.get("content", "").strip()
+        # Remover possível markdown ```json ... ```
+        texto = re.sub(r'^```(?:json)?\s*', '', texto)
+        texto = re.sub(r'\s*```$', '', texto)
+        sugestoes = json.loads(texto)
+        por_numero = {int(s["numero"]): s.get("sugestao", "") for s in sugestoes}
+    except Exception as e:
+        if logger:
+            logger.aviso(f"Inferência de sumários: resposta LLM inválida ({e})")
+        return aulas
+
+    return [{**a, "sugestao": por_numero.get(a.get("numero", -1), "")} for a in aulas]
+
+
 def _carregar_precos_config() -> dict[str, tuple[float, float]]:
     """Carrega tabela de preços de LLM a partir de configuração.
 

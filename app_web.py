@@ -36,7 +36,7 @@ from sigarra import SigarraSession, load_env
 from logger import AuditoriaLogger
 from auditoria_core import analisar_uc, submeter_preview_uc, _SCRIPT_DIR
 from sigarra import extrair_ocorrencias_servico_docente
-from sigarra import extrair_ficha_uc
+from sigarra import extrair_ficha_uc, submeter_sumario
 
 
 # Carregar .env antes de ler variáveis WEB_* no arranque do módulo
@@ -2610,6 +2610,20 @@ def confirm_submit(job_id: str):
         payload.pop("_resultados_com_erros", None)
         payload.pop("_funcionamento_com_erros", None)
 
+    # Submeter sumários selecionados pelo utilizador
+    for s in payload.get("sumarios_sugeridos", []):
+        std_id = s.get("std_id", "")
+        if not std_id:
+            continue
+        if request.form.get(f"sum_check_{std_id}"):
+            texto = request.form.get(f"sum_texto_{std_id}", "").strip()
+            if texto:
+                try:
+                    submeter_sumario(std_id, texto, s.get("data_iso", ""),
+                                     sess.codigo_pessoal or "", sess)
+                except Exception:
+                    pass  # não bloqueia a submissão do relatório
+
     # Guardar payload atualizado
     try:
         tmp = preview_path.with_suffix(".tmp")
@@ -2760,8 +2774,9 @@ def preview(job_id: str):
         aviso_rgpd = ""
 
     aulas_sem_sumario = payload.get("aulas_sem_sumario", [])
+    sumarios_sugeridos = payload.get("sumarios_sugeridos", [])
     if aulas_sem_sumario:
-        # Agrupar por turma: mostrar apenas contagem
+        # Contagem por turma
         turmas_map: dict[str, int] = {}
         for a in aulas_sem_sumario:
             chave = f"{a['turma']} ({a['tipo_aula']})" if a.get("tipo_aula") else a["turma"]
@@ -2770,12 +2785,37 @@ def preview(job_id: str):
             f"<li>{_esc(turma)}: <span class='muted'>{n} aula(s) sem sumário</span></li>"
             for turma, n in turmas_map.items()
         )
+        # Sugestões editáveis (só as que têm std_id para submissão programática)
+        sugestoes_html = ""
+        sugs_com_std = [s for s in sumarios_sugeridos if s.get("std_id")]
+        if sugs_com_std:
+            linhas = []
+            for s in sugs_com_std:
+                std_id = _esc(s["std_id"])
+                turma_label = f"{s.get('turma', '')} ({s.get('tipo_aula', '')})" if s.get("tipo_aula") else s.get("turma", "")
+                label = f"Aula {s['numero']} · {s.get('data_iso', s.get('data', ''))} · {_esc(turma_label)}"
+                sugestao = _esc(s.get("sugestao", ""))
+                checked = "checked" if s.get("sugestao") else ""
+                linhas.append(f"""
+      <div style="margin:8px 0 4px;">
+        <label style="display:flex;align-items:baseline;gap:8px;font-size:0.92em;">
+          <input type="checkbox" name="sum_check_{std_id}" {checked} style="margin-top:2px;flex-shrink:0;">
+          <span>{label}</span>
+        </label>
+        <textarea name="sum_texto_{std_id}" rows="2"
+          style="width:100%;margin-top:4px;font-size:0.9em;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;resize:vertical;"
+          >{sugestao}</textarea>
+      </div>""")
+            sugestoes_html = f"""
+      <p class="muted" style="margin:10px 0 4px;">Sugestões do Moodle — selecione as que pretende submeter ao SIGARRA:</p>
+      {"".join(linhas)}"""
         aviso_sumarios = f"""
     <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
       <b>⚠ Sumários por lançar</b>
-      <ul style="margin:6px 0 0;padding-left:18px;">{itens_sums}</ul>
+      <ul style="margin:6px 0 0;padding-left:18px;">{itens_sums}</ul>{sugestoes_html}
     </div>"""
     else:
+        sumarios_sugeridos = []
         aviso_sumarios = ""
 
     pautas_pendentes = payload.get("pautas_classificacoes_pendentes", [])

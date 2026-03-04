@@ -25,9 +25,10 @@ from sigarra import (
     extrair_inquerito_pedagogico, extrair_comentarios_inquerito,
     extrair_form_relatorio, submeter_relatorio,
     calcular_horas_relatorio,
+    extrair_aulas_adm, submeter_sumario,
 )
 from moodle import extrair_enunciados_moodle, extrair_moodle_uc
-from llm_analise import analisar_uc_integrado
+from llm_analise import analisar_uc_integrado, inferir_sumarios_moodle
 from logger import AuditoriaLogger
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
@@ -368,6 +369,23 @@ def analisar_uc(
         else:
             log.info(f"  ✓ Todas as {len(sums)} aulas têm sumário.")
 
+    # Obter std_ids das aulas sem sumário (necessário para submissão programática)
+    sumarios_sugeridos: list[dict] = []
+    if aulas_sem_sumario:
+        try:
+            aulas_adm = extrair_aulas_adm(oc_id, sessao)
+            adm_por_numero = {a["numero"]: a for a in aulas_adm}
+            for a in aulas_sem_sumario:
+                adm = adm_por_numero.get(a["numero"], {})
+                sumarios_sugeridos.append({
+                    **a,
+                    "std_id": adm.get("std_id", ""),
+                    "data_iso": adm.get("data", ""),   # YYYY-MM-DD para o POST
+                    "sugestao": "",
+                })
+        except Exception as e:
+            log.aviso(f"Não foi possível obter std_ids das aulas ({e})")
+
     # --- Conteúdos do Moodle ---
     conteudos_moodle = None
     moodle_url = ficha.get("moodle_url")
@@ -678,6 +696,19 @@ def analisar_uc(
     log.info(f"\n--- Funcionamento da UC ---\n")
     log.info(funcionamento_texto)
 
+    # Inferir sumários em falta a partir do Moodle
+    if sumarios_sugeridos and conteudos_moodle:
+        try:
+            sumarios_sugeridos = inferir_sumarios_moodle(
+                sumarios_sugeridos, conteudos_moodle, ficha,
+                provider=provider_llm, modelo=llm_modelo_condensacao, logger=log,
+            )
+            n_com_sugestao = sum(1 for s in sumarios_sugeridos if s.get("sugestao"))
+            if n_com_sugestao:
+                log.fase(f"  💡 {n_com_sugestao} sumário(s) inferido(s) do Moodle para revisão")
+        except Exception as e:
+            log.aviso(f"Não foi possível inferir sumários ({e})")
+
     # Processar classificação de enunciados Moodle
     enunciados_moodle_bloco = resultado_int.get("enunciados_moodle_bloco", "")
     if enunciados_moodle_bloco:
@@ -723,6 +754,7 @@ def analisar_uc(
             "nome_uc": ficha.get("nome_uc", ""),
             "enunciados_excluidos_rgpd": enunciados_excluidos_rgpd,
             "aulas_sem_sumario": aulas_sem_sumario,
+            "sumarios_sugeridos": sumarios_sugeridos,
             "pautas_classificacoes_pendentes": pautas_classificacoes_pendentes,
             "programa_efetivo": programa_efetivo or "",
             "comentarios_resultados": campos.get("pv_rel_coment_res", ""),

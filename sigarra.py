@@ -1099,6 +1099,78 @@ def verificar_estudantes_sem_classificacao(pauta_id: str, sessao: SigarraSession
 
 
 # ---------------------------------------------------------------------------
+# Administração de sumários — extração de std_ids e submissão
+# ---------------------------------------------------------------------------
+
+def extrair_aulas_adm(ocorrencia_id: str, sessao: SigarraSession) -> list[dict]:
+    """Extrai aulas SEM sumário da página de administração de sumários.
+
+    Acede a sumarios_adm.inicio e parseia células com class='aulansum'.
+    Devolve lista de dicts com 'std_id', 'data' (YYYY-MM-DD) e 'numero'.
+    Requer sessão autenticada como docente da UC.
+    """
+    url = f"{SIGARRA_BASE}/sumarios_adm.inicio?pv_ocorrencia_id={ocorrencia_id}"
+    html = sessao.fetch_html(url)
+    soup = BeautifulSoup(html, "html.parser")
+    resultado = []
+    for td in soup.find_all("td", class_="aulansum"):
+        link = td.find("a", href=lambda h: h and "pv_std_id=" in h)
+        span = td.find("span", class_="nota")
+        if not link or not span:
+            continue
+        m = re.search(r'pv_std_id=(\d+)', link["href"])
+        if not m:
+            continue
+        texto = td.get_text(" ", strip=True)
+        num_m = re.search(r'\((\d+)\)', texto)
+        resultado.append({
+            "std_id": m.group(1),
+            "data": span.get_text(strip=True),        # YYYY-MM-DD
+            "numero": int(num_m.group(1)) if num_m else None,
+        })
+    return resultado
+
+
+def submeter_sumario(
+    std_id: str,
+    texto: str,
+    data_aula: str,       # YYYY-MM-DD
+    cod_docente: str,
+    sessao: SigarraSession,
+) -> bool:
+    """Submete um sumário para uma aula no SIGARRA.
+
+    Faz primeiro GET ao formulário para extrair p_n_aula (plano do docente),
+    depois POST a sumarios_adm.sub_inserir.
+    Devolve True se o redireccionamento pós-POST for para sumarios_adm.inicio.
+    """
+    # 1. GET do formulário para extrair p_n_aula
+    form_html = sessao.fetch_html(f"{SIGARRA_BASE}/sumarios_adm.inserir?pv_std_id={std_id}")
+    soup = BeautifulSoup(form_html, "html.parser")
+    opt = soup.select_one("select[name='p_n_aula'] option[selected]")
+    p_n_aula = opt["value"] if opt else ""
+
+    # 2. POST
+    post_data = {
+        "pv_std_id": std_id,
+        "p_cod_docente": cod_docente,
+        "p_sumario": texto,
+        "parr_turmas": std_id,
+        "parr_turmas_escolhidas": std_id,
+        "parr_efectiva": data_aula,
+        "p_n_aula": p_n_aula,
+        "pv_action": "Guardar",
+        "pv_visivel": "S",
+        "p_aula_tipo": std_id,
+    }
+    _, final_url = sessao._saml_request(
+        f"{SIGARRA_BASE}/sumarios_adm.sub_inserir",
+        post_data=post_data,
+    )
+    return "sumarios_adm.inicio" in final_url
+
+
+# ---------------------------------------------------------------------------
 # Extração de resultados por curso (tabela resumo, via AJAX)
 # ---------------------------------------------------------------------------
 
