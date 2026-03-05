@@ -1340,10 +1340,10 @@ Responde APENAS com JSON válido, sem texto adicional:
             max_tokens=1024,
         )
         texto = resp.get("text", "").strip()
-        # Remover possível markdown ```json ... ```
-        texto = re.sub(r'^```(?:json)?\s*', '', texto)
-        texto = re.sub(r'\s*```$', '', texto)
-        sugestoes = json.loads(texto)
+        m = re.search(r'\[.*\]', texto, re.DOTALL)
+        if not m:
+            raise ValueError("JSON array não encontrado na resposta")
+        sugestoes = json.loads(m.group())
         por_numero = {int(s["numero"]): s.get("sugestao", "") for s in sugestoes}
     except Exception as e:
         if logger:
