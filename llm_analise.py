@@ -852,6 +852,7 @@ def analisar_uc_integrado(
     ficha: dict,
     sumarios: list[dict],
     conteudos_moodle: dict | None = None,
+    conteudo_pagina_web: str | None = None,
     enunciados: list[dict] | None = None,
     resultados_atual: dict | None = None,
     resultados_anterior: dict | None = None,
@@ -974,6 +975,10 @@ def analisar_uc_integrado(
             for act in sec.get("atividades", []):
                 linhas_m.append(f"- [{act['tipo']}] {act['nome']}")
         partes.append(f"## Conteúdos do Moodle\n{chr(10).join(linhas_m).strip()}")
+
+    # 3b. Página web pública da UC
+    if conteudo_pagina_web:
+        partes.append(f"## Página Web da UC\n{conteudo_pagina_web}")
 
     # 4. Enunciados de avaliação (só listagem; PDFs vão como documentos anexos)
     if enunciados:

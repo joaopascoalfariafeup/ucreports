@@ -588,6 +588,7 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
     # o mismatch de ano é detectado em extrair_moodle_uc via
     # _extrair_ano_instancia_moodle, que descarta o resultado se necessário.
     moodle_url = _extrair_moodle_url(html)
+    pagina_web_url = _extrair_pagina_web_url(html)
 
     return {
         "nome_uc": nome_uc,
@@ -606,6 +607,7 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
         "obtencao_frequencia": frequencia,
         "horas_contacto": horas_contacto,
         "moodle_url": moodle_url,
+        "pagina_web_url": pagina_web_url,
     }
 
 
@@ -670,6 +672,21 @@ def _extrair_moodle_url(html: str) -> str | None:
     if "p_codigo=-1" in href:
         return None
     return f"{SIGARRA_BASE}/{href}"
+
+
+def _extrair_pagina_web_url(html: str) -> str | None:
+    """Extrai o URL do campo 'Página Web' da ficha de UC no SIGARRA."""
+    m = re.search(
+        r'<td[^>]*class=["\'][^"\']*formulario-legenda[^"\']*["\'][^>]*>\s*'
+        r'P.gina\s+Web[^<]*</td>\s*<td[^>]*>\s*<a[^>]*href="([^"]+)"',
+        html, re.IGNORECASE | re.DOTALL,
+    )
+    if not m:
+        return None
+    url = m.group(1).strip()
+    if not url.startswith("http"):
+        url = "https://" + url.lstrip("/")
+    return url
 
 
 # ---------------------------------------------------------------------------

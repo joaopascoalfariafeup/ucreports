@@ -496,6 +496,30 @@ def analisar_uc(
         else:
             log.concluir_fase("moodle", "Moodle: sem acesso", ok=False)
 
+    # --- Página Web da UC ---
+    conteudo_pagina_web = None
+    _pw_url = ficha.get("pagina_web_url")
+    _web_pagina_web = os.environ.get("WEB_PAGINA_WEB", "on").strip().lower() not in ("0", "off", "false")
+    if _web_pagina_web and _pw_url and "moodle" not in _pw_url.lower() and _pw_url != (ficha.get("moodle_url") or ""):
+        log.iniciar_fase("pagina_web", "Extrair página web da UC...")
+        try:
+            from pagina_web_uc import extrair_pagina_web_uc  # noqa: PLC0415
+            _pw_provider = (llm_provider or os.environ.get("LLM_PROVIDER", "iaedu")).strip().lower()
+            _pw_modelo = (
+                os.environ.get("WEB_PAGINA_WEB_MODELO", "").strip()
+                or llm_modelo_condensacao
+                or "gpt-4o"
+            )
+            conteudo_pagina_web = extrair_pagina_web_uc(
+                _pw_url,
+                provider=_pw_provider,
+                modelo=_pw_modelo,
+                verbosidade=log._verbosidade,
+            )
+            log.concluir_fase("pagina_web", f"Página web: {len(conteudo_pagina_web)} chars")
+        except Exception as e:
+            log.concluir_fase("pagina_web", f"Página web: {e}", ok=False)
+
     # --- Enunciados de avaliação ---
     log.iniciar_fase("enunciados", "Extrair enunciados de elementos de avaliação...")
     log.info(f"  Tipo de avaliação: {ficha.get('tipo_avaliacao', '?')}")
@@ -722,6 +746,7 @@ def analisar_uc(
         ficha=ficha,
         sumarios=sums,
         conteudos_moodle=conteudos_moodle,
+        conteudo_pagina_web=conteudo_pagina_web,
         enunciados=enunciados or None,
         resultados_atual=resultados_atual,
         resultados_anterior=resultados_anterior,
