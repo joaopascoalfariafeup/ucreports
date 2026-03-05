@@ -462,7 +462,7 @@ def analisar_uc(
             f"{SIGARRA_BASE}/moodle_portal.go_moodle_portal?p_codigo={sessao.codigo_pessoal}",
         ]
     if _urls_moodle:
-        log.iniciar_fase("moodle", "Extrair conteúdos do Moodle...")
+        log.iniciar_fase("moodle", "Extrair atividades do Moodle...")
         _moodle_erro = None
         for _url in _urls_moodle:
             log.info(f"  Link Moodle: {_url}")
