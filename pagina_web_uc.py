@@ -21,7 +21,7 @@ MAX_SUBPAGES = 5
 # Máximo de links a passar ao LLM para selecção
 MAX_LINKS_LLM = 60
 # Limite de texto por página (chars) para não encher contexto LLM
-MAX_TEXT_PER_PAGE = 24000
+MAX_TEXT_PER_PAGE = 32000
 
 # Tags que não contêm conteúdo útil
 _SKIP_TAGS = frozenset([

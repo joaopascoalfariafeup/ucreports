@@ -2716,6 +2716,15 @@ def extrair_ocorrencias_servico_docente(
             except Exception as e:
                 print(f"  Aviso: falha ao verificar regência na ocorrência {oc_id}: {e}")
         resultados = filtradas
+    else:
+        for item in resultados:
+            oc_id = item.get("ocorrencia_id", "")
+            try:
+                _, sigla_uc = _info_docencia_ocorrencia(sessao, oc_id, doc_codigo)
+                if sigla_uc:
+                    item["sigla_uc"] = sigla_uc
+            except Exception:
+                pass
 
     if incluir_meta:
         return resultados, {
