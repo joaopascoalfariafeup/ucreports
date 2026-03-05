@@ -2346,7 +2346,7 @@ def ucs():
         option_parts = []
         for u in ucs_list:
             sigla = u.get("sigla_uc", u.get("sigla", ""))
-            sigla_prefix = f'{_esc(sigla)} — ' if sigla else ""
+            sigla_prefix = f'[{_esc(sigla)}] ' if sigla else ""
             option_parts.append(
                 f'<option value="{u["ocorrencia_id"]}" data-sigla="{_esc(sigla)}" data-nome="{_esc(u["nome_uc"])}"'
                 f'{" selected" if u is uc_presel else ""}>'
@@ -2375,7 +2375,7 @@ def ucs():
 
             <div class="form-row-inline">
               <label for="llm_choice_select">Modelo:</label>
-              <select name="llm_choice" id="llm_choice_select" required style="max-width:200px;">
+              <select name="llm_choice" id="llm_choice_select" required style="max-width:220px;">
                 {llm_choice_option_tags}
               </select>
             </div>
