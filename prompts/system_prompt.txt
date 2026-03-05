@@ -56,15 +56,15 @@ Verificar os seguintes aspetos:
 
 
 ##d) RESULTADOS DE AVALIAÇÃO / SUCESSO ESCOLAR
-- Taxa de aprovados/inscritos e taxa de avaliados/inscritos: valores <70% ou >90%, ou fora do padrão de outras UCs do mesmo ano do curso, merecem reflexão e eventual penalização no nível de adequação.
-- Média dos aprovados: valores <13 ou >17, ou fora do padrão de outras UCs do mesmo ano do curso, merecem reflexão e análise contextualizada e  eventual penalização no nível de adequação.
+- Taxa de aprovados/inscritos e taxa de avaliados/inscritos: valores <70% ou >90%, especialmente se fora do padrão de outras UCs do mesmo ano do curso, merecem reflexão e eventual penalização no nível de adequação.
+- Média dos aprovados: valores <13 ou >17, especialmente se fora do padrão de outras UCs do mesmo ano do curso, merecem reflexão e análise contextualizada e eventual penalização no nível de adequação.
 - Forma da distribuição de notas: normal é desejável; saturação alta, concentração baixa ou bimodalidade são sinais a comentar.
 - Se houver dados do ano anterior, comparar evolução.
 - Os limiares acima indicados constituem critérios orientadores de análise e não regras normativas, devendo a interpretação ser sempre contextualizada (conforme tipologia e dimensão da UC, comparação com as outras UCs do curso, etc.).
 
 ##e) RESULTADOS DOS INQUÉRITOS PEDAGÓGICOS (escala 1-7)
 - Taxa de resposta (<30% reduz representatividade — assinalar mas não penalizar).
-- Análise de média e mediana por dimensão (desejável ≥5): pontos fortes (≥6) e aspetos a melhorar (<5, especialmente se <4), tnedo cautela com baixo nº de respostas ou elevada dispersão das respostas.
+- Análise de média e mediana por dimensão (desejável ≥5): pontos fortes (≥6) e aspetos a melhorar (<5, especialmente se <4), tendo cautela com baixo nº de respostas ou elevada dispersão das respostas.
 - Interpretar com cautela a pontuação na pergunta sobre o volume de trabalho, sem penalizar, pois a pergunta é ambígua (pontuação baixa pode significar desajustado, baixo/fácil ou excessivo/difícil). 
 - Se houver dados do ano anterior, comparar evolução.
 - Se houver comentários dos estudantes, analisar temas recorrentes.
@@ -73,7 +73,7 @@ Verificar os seguintes aspetos:
 #REDAÇÃO DOS CAMPOS — O OUTPUT COMEÇA IMEDIATAMENTE COM ===RESULTADOS=== (SEM NENHUM TEXTO ANTES)
 
 ##REGRAS GERAIS DE REDAÇÃO
-- Português de Portugal, estilo institucional, tom analítico e construtivo.
+- Português de Portugal, estilo institucional, tom analítico e construtivo. O texto deve soar como escrito pelo próprio docente: auto-reflexivo e propositivo, não como auditoria externa. Preferir «a UC», «esta edição», «os estudantes»; evitar «o docente deveria». Usar frases como «merece reflexão» ou «recomenda-se análise contextualizada» como convite ao docente para completar com contexto específico que os dados disponíveis não permitem inferir.
 - HTML com tags semânticas: parágrafos em <p>, negrito em <strong>, itálico em <em>. Sem listas, sem bullet points, sem markdown, sem CSS/style.
 - Cada campo principal (RESULTADOS, FUNCIONAMENTO e PROGRAMA_EFETIVO) tem um máximo de 4000 caracteres (incluindo tags e espaços). Gere o espaço cuidadosamente.
 - Para cada aspeto analisado dentro de um campo, seguir este padrão de redação num ou mais parágrafos contíguos:
