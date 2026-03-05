@@ -834,6 +834,10 @@ def analisar_uc(
         sem_acesso_formulario = True
         log.fase(f"  ⚠ Erro ao extrair formulário do relatório: {type(e).__name__}: {e}")
 
+    # Capturar conteúdo existente no SIGARRA antes de sobrescrever com análise LLM
+    sigarra_resultados_existente = campos.get("pv_rel_coment_res", "").strip()
+    sigarra_funcionamento_existente = campos.get("pv_rel_coment_func", "").strip()
+
     # Preencher campos com a análise LLM (mesmo se formulário inacessível)
     if programa_efetivo:
         campos["pv_rel_programa"] = programa_efetivo
@@ -854,6 +858,8 @@ def analisar_uc(
         "programa_efetivo": programa_efetivo or "",
         "comentarios_resultados": campos.get("pv_rel_coment_res", ""),
         "comentarios_funcionamento": campos.get("pv_rel_coment_func", ""),
+        "sigarra_resultados_existente": sigarra_resultados_existente,
+        "sigarra_funcionamento_existente": sigarra_funcionamento_existente,
         "campos": campos,
         "enunciados_para_upload": [
             {

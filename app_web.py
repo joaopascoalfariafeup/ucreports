@@ -2818,6 +2818,23 @@ def preview(job_id: str):
     )
     can_submit = job.done and job.ok and job.action == "preview" and not payload.get("sem_acesso_formulario")
 
+    # Aviso se campos de comentários já têm conteúdo no SIGARRA
+    _sig_res = payload.get("sigarra_resultados_existente", "").strip()
+    _sig_func = payload.get("sigarra_funcionamento_existente", "").strip()
+    _campos_com_conteudo = []
+    if _sig_res:
+        _campos_com_conteudo.append("Comentários aos resultados")
+    if _sig_func:
+        _campos_com_conteudo.append("Comentários ao funcionamento")
+    if _campos_com_conteudo and can_submit:
+        _lista_campos = " e ".join(f"<strong>{_esc(c)}</strong>" for c in _campos_com_conteudo)
+        aviso_conteudo_existente = f"""
+    <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
+      <p style="margin:0;">⚠ {_lista_campos} já {'têm' if len(_campos_com_conteudo) > 1 else 'tem'} conteúdo no SIGARRA. Ao confirmar, esse conteúdo será substituído pela análise gerada acima. Por favor reveja antes de submeter.</p>
+    </div>"""
+    else:
+        aviso_conteudo_existente = ""
+
     excluidos_rgpd = payload.get("enunciados_excluidos_rgpd", [])
     if excluidos_rgpd:
         itens_rgpd = "".join(
@@ -2990,14 +3007,15 @@ def preview(job_id: str):
       <div class="preview-html" id="edit-funcionamento">{func}</div>
     </div>
 
-    <div class="card">
-      <div class="navbar">
-        <div class="navbar-left">
     """
 
     if can_submit:
         csrf = _get_csrf_token()
+        body += aviso_conteudo_existente
         body += f"""
+    <div class="card">
+      <div class="navbar">
+        <div class="navbar-left">
           <form id="confirm-form" method="post" action="{url_for('confirm_submit', job_id=job_id)}">
             <input type="hidden" name="csrf_token" value="{_esc(csrf)}">
             <input type="hidden" name="edit_programa" id="field-programa" value="">
@@ -3005,6 +3023,12 @@ def preview(job_id: str):
             <input type="hidden" name="edit_funcionamento" id="field-funcionamento" value="">
             <button type="submit">Confirmar e submeter no SIGARRA</button>
           </form>
+        """
+    else:
+        body += """
+    <div class="card">
+      <div class="navbar">
+        <div class="navbar-left">
         """
 
     body += f"""
