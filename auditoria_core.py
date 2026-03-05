@@ -449,7 +449,12 @@ def analisar_uc(
     # --- Conteúdos do Moodle ---
     conteudos_moodle = None
     moodle_url = ficha.get("moodle_url")
+    _pw_url = ficha.get("pagina_web_url")  # calculado aqui para poder ser usado já no Moodle
     _urls_moodle = ([moodle_url] if moodle_url else [])
+    # Se "Página Web" da ficha aponta para um Moodle directo (course/view.php),
+    # usá-lo como URL prioritária — pode ser um Moodle de agregado diferente do portal padrão
+    if _pw_url and "moodle" in _pw_url.lower() and _pw_url not in _urls_moodle:
+        _urls_moodle = [_pw_url] + _urls_moodle
     if sessao.codigo_pessoal:
         # Portais como fallback: ano corrente e depois ano anterior
         _urls_moodle += [
@@ -496,11 +501,10 @@ def analisar_uc(
         else:
             log.concluir_fase("moodle", "Moodle: sem acesso", ok=False)
 
-    # --- Página Web da UC ---
+    # --- Página Web da UC (só se não for URL Moodle — essa já foi tratada acima) ---
     conteudo_pagina_web = None
-    _pw_url = ficha.get("pagina_web_url")
     _web_pagina_web = os.environ.get("WEB_PAGINA_WEB", "on").strip().lower() not in ("0", "off", "false")
-    if _web_pagina_web and _pw_url and "moodle" not in _pw_url.lower() and _pw_url != (ficha.get("moodle_url") or ""):
+    if _web_pagina_web and _pw_url and "moodle" not in _pw_url.lower() and _pw_url != (moodle_url or ""):
         log.iniciar_fase("pagina_web", "Extrair página web da UC...")
         try:
             from pagina_web_uc import extrair_pagina_web_uc  # noqa: PLC0415
@@ -516,7 +520,8 @@ def analisar_uc(
                 modelo=_pw_modelo,
                 verbosidade=log._verbosidade,
             )
-            log.concluir_fase("pagina_web", f"Página web: {len(conteudo_pagina_web)} chars")
+            n_pags = 1 + conteudo_pagina_web.count("\n\n=== Subpágina ")
+            log.concluir_fase("pagina_web", f"Página web: {n_pags} página(s), {len(conteudo_pagina_web)} chars")
         except Exception as e:
             log.concluir_fase("pagina_web", f"Página web: {e}", ok=False)
 

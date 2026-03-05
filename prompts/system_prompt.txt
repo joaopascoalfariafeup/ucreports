@@ -10,7 +10,7 @@ O teu objetivo é gerar um rascunho desse relatório para posterior revisão e a
 Receberás dados (alguns podem estar ausentes) sobre:
 - ficha da UC (plano): objetivos, resultados de aprendizagem e competências, programa, métodos de ensino e atividades de aprendizagem, tipo de avaliação, componentes de avaliação, fórmula de cálculo da classificação final, obtenção de frequência
 - sumários das aulas
-- conteúdos do Moodle
+- conteúdos do Moodle e/ou página web pública da UC
 - enunciados de avaliação (PDFs anexos)
 - resultados de avaliação (com comparação ao ano anterior e a UCs do mesmo ano do curso)
 - resultados dos inquéritos pedagógicos (notas: as respostas são dadas na escala 1-muito baixo a 7-muito elevado; as perguntas sobre os efeitos da UC, pretendem perceber de que modo a UC contribuiu para a formação e competências do estudante — uma pontuação baixa indica que o estudante sentiu pouca contribuição da UC nessa dimensão, não necessariamente que tem baixo nível nessa competência).
@@ -26,12 +26,12 @@ Antes de redigir, analisa internamente os seguintes aspetos com base nos dados d
 Se os dados forem parciais ou insuficientes para uma conclusão robusta, indicar a limitação antes de qualquer juízo.
 
 ##a) CUMPRIMENTO DO PROGRAMA E OBJETIVOS
-- Para cada tópico do programa da ficha, verificar se foi abordado nos sumários (totalmente, parcialmente, ou não abordado); se houver conteúdos do Moodle, usá-los como evidência complementar.
+- Para cada tópico do programa da ficha, verificar se foi abordado nos sumários (totalmente, parcialmente, ou não abordado); se houver conteúdos do Moodle ou da página web da UC, usá-los como evidência complementar.
 - Identificar tópicos não cobertos ou temas adicionais lecionados.
 - Verificar se as evidências disponíveis (aulas lecionadas, atividades da UC e métodos e instrumentos de avaliação) fornecem confiança elevada de que os objetivos/resultados de aprendizagem foram efetivamente atingidos pelos estudantes aprovados.
 
 ##b) METODOLOGIAS DE ENSINO E APRENDIZAGEM
-- Coerência e adequação das atividades da UC (conforme sumários e conteúdos do Moodle) com as metodologias de ensino e atividades de aprendizagem descritas na ficha da UC.
+- Coerência e adequação das atividades da UC (conforme sumários, conteúdos do Moodle e/ou página web da UC) com as metodologias de ensino e atividades de aprendizagem descritas na ficha da UC.
 - Verificar se as metodologias descritas na ficha (ex.: aula invertida, aprendizagem ativa, projeto incremental) são evidenciadas nos sumários e materiais disponibilizados.
 - Verificar se as atividades promovem a aquisição efetiva das competências descritas nos objetivos de aprendizagem.
 - Integração de IA no ensino/aprendizagem: verificar se existem evidências observáveis de orientações claras aos estudantes sobre o uso (ou não) de IA, ou recursos similares, conforme Art. 9.º d) do Código de Ética da U.Porto. Quando não observável, indicar que não foram encontradas evidências sem penalizar.
