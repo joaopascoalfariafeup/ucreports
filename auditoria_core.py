@@ -19,6 +19,7 @@ from sigarra import (
     extrair_resultados_uc, extrair_resultados_curso,
     extrair_pautas_uc, verificar_estudantes_sem_classificacao,
     extrair_enunciados_avaliacao,
+    extrair_conteudos_sigarra,
     submeter_enunciados_sigarra,
     inferir_epoca_enunciado,
     extrair_ocorrencia_anterior,
@@ -552,6 +553,21 @@ def analisar_uc(
         except (PermissionError, ConnectionError) as e:
             log.aviso(f"  Aviso Moodle: {e}")
 
+    n_conteudos = 0
+    _conteudos_pag_id = ficha.get("conteudos_pct_pag_id")
+    if _conteudos_pag_id:
+        log.info(f"  A extrair conteúdos SIGARRA...")
+        try:
+            enunciados_conteudos = extrair_conteudos_sigarra(
+                _conteudos_pag_id, oc_id, sessao,
+                pasta_uc=pasta_uc, verbosidade=log._verbosidade,
+            )
+            if enunciados_conteudos:
+                n_conteudos = len(enunciados_conteudos)
+                enunciados.extend(enunciados_conteudos)
+        except Exception as e:
+            log.aviso(f"  Aviso Conteúdos SIGARRA: {e}")
+
     # Deduplicar por hash de conteúdo e nome
     n_dups = 0
     if len(enunciados) > 1:
@@ -579,6 +595,8 @@ def analisar_uc(
         partes_orig.append(f"{n_sigarra} SIGARRA")
     if n_moodle:
         partes_orig.append(f"{n_moodle} Moodle")
+    if n_conteudos:
+        partes_orig.append(f"{n_conteudos} Conteúdos SIGARRA")
     resumo_orig = f" ({', '.join(partes_orig)})" if partes_orig else ""
     dups_info = f", {n_dups} duplicado(s)" if n_dups else ""
     log.concluir_fase("enunciados", f"{len(enunciados)} enunciado(s) extraído(s){resumo_orig}{dups_info}")

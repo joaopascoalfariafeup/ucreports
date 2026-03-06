@@ -56,6 +56,8 @@ SIGARRA_REL_UC_EDIT_URL = f"{SIGARRA_BASE}/ucurr_adm.rel_uc_edit?pv_ocorrencia_i
 SIGARRA_REL_UC_VIEW_URL = f"{SIGARRA_BASE}/ucurr_adm.rel_uc_view?pv_ocorrencia_id={{}}"
 SIGARRA_REL_UC_SUB_URL = f"{SIGARRA_BASE}/ucurr_adm.rel_uc_sub"
 SIGARRA_UPLOAD_SANDBOX_URL = f"{SIGARRA_BASE}/gdoc_geral.upload_to_sandbox"
+SIGARRA_CONTEUDOS_URL = f"{SIGARRA_BASE}/conteudos_geral.ver?pct_pag_id={{}}&pct_parametros=pv_ocorrencia_id={{}}"
+SIGARRA_CONTEUDOS_FILE_URL = f"{SIGARRA_BASE}/conteudos_service.conteudos_cont?pct_id={{}}&pv_cod={{}}"
 
 
 # ---------------------------------------------------------------------------
@@ -589,6 +591,7 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
     # _extrair_ano_instancia_moodle, que descarta o resultado se necessário.
     moodle_url = _extrair_moodle_url(html)
     pagina_web_url = _extrair_pagina_web_url(html)
+    conteudos_pct_pag_id = _extrair_conteudos_pag_id(html)
 
     return {
         "nome_uc": nome_uc,
@@ -608,6 +611,7 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
         "horas_contacto": horas_contacto,
         "moodle_url": moodle_url,
         "pagina_web_url": pagina_web_url,
+        "conteudos_pct_pag_id": conteudos_pct_pag_id,
     }
 
 
@@ -674,6 +678,12 @@ def _extrair_moodle_url(html: str) -> str | None:
     return f"{SIGARRA_BASE}/{href}"
 
 
+def _extrair_conteudos_pag_id(html: str) -> str | None:
+    """Extrai o pct_pag_id do link 'Conteúdos' na ficha de UC."""
+    m = re.search(r'conteudos_geral\.ver\?pct_pag_id=(\d+)', html)
+    return m.group(1) if m else None
+
+
 def _extrair_pagina_web_url(html: str) -> str | None:
     """Extrai o URL do campo 'Página Web' da ficha de UC no SIGARRA."""
     m = re.search(
@@ -687,6 +697,143 @@ def _extrair_pagina_web_url(html: str) -> str | None:
     if not url.startswith("http"):
         url = "https://" + url.lstrip("/")
     return url
+
+
+# ---------------------------------------------------------------------------
+# Conteúdos SIGARRA (ficheiros publicados pelo docente no SIGARRA)
+# ---------------------------------------------------------------------------
+
+_CONTEUDOS_MAX_KB = 10 * 1024  # 10 MB
+_CONTEUDOS_TIPOS_ACEITES = frozenset([
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+])
+
+
+def extrair_conteudos_sigarra(
+    pct_pag_id: str,
+    ocorrencia_id: str,
+    sessao: "SigarraSession",
+    pasta_uc: "Path | None" = None,
+    verbosidade: int = 1,
+) -> list[dict]:
+    """Extrai e descarrega ficheiros dos Conteúdos SIGARRA da UC.
+
+    Percorre as pastas publicadas, descarrega PDFs/DOCX até 10 MB e
+    devolve lista de dicts compatível com a estrutura de enunciados
+    (nome, descricao, epoca, data, url, pdf_bytes, origem).
+    """
+    base_url = SIGARRA_CONTEUDOS_URL.format(pct_pag_id, ocorrencia_id)
+
+    # 1. Listar pastas — extrair IDs de grupo únicos
+    html_lista = sessao.fetch_html(base_url)
+    grupos: list[str] = []
+    for m in re.finditer(r'pct_grupo=(\d+)', html_lista):
+        gid = m.group(1)
+        if gid not in grupos:
+            grupos.append(gid)
+
+    if verbosidade >= 2:
+        print(f"  Conteúdos SIGARRA: {len(grupos)} pasta(s)")
+
+    # 2. Expandir cada pasta e recolher entradas de ficheiros
+    ficheiros: list[dict] = []
+    vistos_pct_id: set[str] = set()
+
+    def _parse_kb(texto: str) -> int:
+        m = re.search(r'([\d.,]+)\s*(KB|MB|GB)', texto, re.IGNORECASE)
+        if not m:
+            return 0
+        val = float(m.group(1).replace(",", "."))
+        unit = m.group(2).upper()
+        if unit == "MB":
+            return int(val * 1024)
+        if unit == "GB":
+            return int(val * 1024 * 1024)
+        return int(val)
+
+    for gid in grupos:
+        url_grupo = base_url + f"&pct_grupo={gid}"
+        try:
+            html_grupo = sessao.fetch_html(url_grupo)
+        except Exception as e:
+            if verbosidade >= 1:
+                print(f"  Conteúdos SIGARRA: falha ao expandir pasta {gid}: {e}")
+            continue
+
+        # Procurar ficheiros (conteudosnivel2 com link de download)
+        for bloco_m in re.finditer(
+            r'<p[^>]*class=["\'][^"\']*conteudosnivel2[^"\']*["\'][^>]*>(.*?)</p>',
+            html_grupo, re.DOTALL | re.IGNORECASE,
+        ):
+            bloco = bloco_m.group(1)
+            link_m = re.search(
+                r'conteudos_service\.conteudos_cont\?pct_id=(\d+)&(?:amp;)?pv_cod=([^"&\s]+)"[^>]*>([^<]+)</a>',
+                bloco,
+            )
+            if not link_m:
+                continue  # URL externo ou texto simples
+            pct_id, pv_cod, nome = link_m.group(1), link_m.group(2), link_m.group(3).strip()
+            if pct_id in vistos_pct_id:
+                continue
+            vistos_pct_id.add(pct_id)
+            size_m = re.search(r'<span[^>]*class=["\']t["\'][^>]*>([^<]+)</span>', bloco)
+            tamanho_kb = _parse_kb(size_m.group(1)) if size_m else 0
+            ficheiros.append({
+                "nome": nome,
+                "pct_id": pct_id,
+                "pv_cod": pv_cod,
+                "tamanho_kb": tamanho_kb,
+            })
+
+    # 3. Descarregar ficheiros dentro do limite de tamanho
+    resultado: list[dict] = []
+    for f in ficheiros:
+        if f["tamanho_kb"] > _CONTEUDOS_MAX_KB:
+            if verbosidade >= 2:
+                print(f"  Conteúdos SIGARRA: ignorar '{f['nome']}' ({f['tamanho_kb']} KB > limite)")
+            continue
+        file_url = SIGARRA_CONTEUDOS_FILE_URL.format(f["pct_id"], f["pv_cod"])
+        try:
+            req = urllib.request.Request(file_url, headers={"User-Agent": "Mozilla/5.0"})
+            resp = sessao.http_open(req, timeout=60, context=f"download conteúdo {f['nome']}")
+            ct = resp.headers.get_content_type() or ""
+            if ct not in _CONTEUDOS_TIPOS_ACEITES:
+                # Aceitar octet-stream se começar por %PDF
+                raw = resp.read()
+                if ct == "application/octet-stream" and raw[:4] == b"%PDF":
+                    pass  # é PDF disfarçado
+                else:
+                    if verbosidade >= 2:
+                        print(f"  Conteúdos SIGARRA: ignorar '{f['nome']}' (Content-Type={ct})")
+                    continue
+            else:
+                raw = resp.read()
+        except Exception as e:
+            if verbosidade >= 1:
+                print(f"  Conteúdos SIGARRA: falha ao descarregar '{f['nome']}': {e}")
+            continue
+
+        if pasta_uc:
+            pasta_dest = pasta_uc / "conteudos_sigarra"
+            pasta_dest.mkdir(parents=True, exist_ok=True)
+            ext = ".pdf" if "pdf" in ct else ".docx"
+            (pasta_dest / (f["nome"] + ext)).write_bytes(raw)
+
+        resultado.append({
+            "nome": f["nome"],
+            "descricao": f["nome"],
+            "epoca": "",
+            "data": "",
+            "url": file_url,
+            "pdf_bytes": raw,
+            "origem": "SIGARRA/Conteúdos",
+        })
+        if verbosidade >= 1:
+            print(f"  Conteúdos SIGARRA: {f['nome']} ({f['tamanho_kb']} KB)")
+
+    return resultado
 
 
 # ---------------------------------------------------------------------------
