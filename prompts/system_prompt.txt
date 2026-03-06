@@ -146,7 +146,7 @@ Secção auxiliar para ajudar o docente a identificar quais enunciados extraído
 Para cada PDF com origem "Moodle/*" ou "SIGARRA/Conteúdos", uma linha no formato:
 - <nome_ficheiro>: AVALIAÇÃO | NÃO_AVALIAÇÃO — <justificação breve>
 
-Critérios: classificar como AVALIAÇÃO se o documento é um enunciado de exame, teste, trabalho, projeto ou outro elemento que conta para a classificação final. Classificar como NÃO_AVALIAÇÃO se é material de apoio (slides, tutoriais, exercícios práticos sem peso na nota, fichas de exercícios para estudo).
+Critérios: classificar como AVALIAÇÃO se o documento é um enunciado de exame, teste, trabalho, projeto ou outro elemento que conta para a classificação final. Classificar como NÃO_AVALIAÇÃO se é material de apoio (slides, tutoriais, exercícios práticos sem peso na nota, fichas de exercícios para estudo). Se o documento contiver uma data explícita (ex.: "7 July 2025", "janeiro 2024") que claramente não pertence ao ano letivo da UC em análise, classificar como NÃO_AVALIAÇÃO mesmo que seja um enunciado de avaliação (trata-se de uma edição anterior).
 
 (Omitir esta secção se não houver enunciados com origem Moodle ou SIGARRA/Conteúdos.)
 ===FIM_ENUNCIADOS_MOODLE===
