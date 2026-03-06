@@ -171,11 +171,11 @@ def _processar_enunciados_moodle_bloco(
 
     enunciados_para_upload = []
     if novos_avaliacao:
-        log.info(f"  {len(novos_avaliacao)} enunciado(s) novo(s) do Moodle para upload")
+        log.info(f"  {len(novos_avaliacao)} enunciado(s) novo(s) para upload")
         nomes_novos = {n.lower() for n in novos_avaliacao}
         enunciados_para_upload = [
             e for e in enunciados
-            if e.get("origem", "").startswith("Moodle")
+            if (e.get("origem", "").startswith("Moodle") or e.get("origem") == "SIGARRA/Conteúdos")
             and e["nome"].lower() in nomes_novos
         ]
 

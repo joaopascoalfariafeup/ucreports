@@ -141,14 +141,14 @@ Máximo 4000 carateres (incluindo tags e espaços).
 
 
 ===ENUNCIADOS_MOODLE===
-Secção auxiliar para ajudar o docente a identificar quais enunciados extraídos do Moodle correspondem efetivamente a elementos de avaliação (e devem ser carregados como anexos ao relatório no SIGARRA) e quais são material de apoio.
+Secção auxiliar para ajudar o docente a identificar quais enunciados extraídos do Moodle ou dos Conteúdos SIGARRA correspondem efetivamente a elementos de avaliação (e devem ser carregados como anexos ao relatório no SIGARRA) e quais são material de apoio.
 
-Para cada PDF com origem "Moodle/*", uma linha no formato:
+Para cada PDF com origem "Moodle/*" ou "SIGARRA/Conteúdos", uma linha no formato:
 - <nome_ficheiro>: AVALIAÇÃO | NÃO_AVALIAÇÃO — <justificação breve>
 
 Critérios: classificar como AVALIAÇÃO se o documento é um enunciado de exame, teste, trabalho, projeto ou outro elemento que conta para a classificação final. Classificar como NÃO_AVALIAÇÃO se é material de apoio (slides, tutoriais, exercícios práticos sem peso na nota, fichas de exercícios para estudo).
 
-(Omitir esta secção se não houver enunciados com origem Moodle.)
+(Omitir esta secção se não houver enunciados com origem Moodle ou SIGARRA/Conteúdos.)
 ===FIM_ENUNCIADOS_MOODLE===
 
 
