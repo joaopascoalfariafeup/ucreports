@@ -539,7 +539,7 @@ def analisar_uc(
             log.concluir_fase("pagina_web", f"Página web: {e}", ok=False)
 
     # --- Enunciados de avaliação ---
-    log.iniciar_fase("enunciados", "Extrair enunciados de elementos de avaliação...")
+    log.iniciar_fase("enunciados", "Extrair enunciados de avaliação...")
     log.info(f"  Tipo de avaliação: {ficha.get('tipo_avaliacao', '?')}")
     componentes = ficha.get("componentes_avaliacao", [])
     if componentes:
@@ -818,16 +818,16 @@ def analisar_uc(
 
     # Inferir sumários em falta a partir do Moodle
     if sumarios_sugeridos and conteudos_moodle:
+        log.iniciar_fase("sumarios_inf", "A inferir sugestões de sumários a partir do Moodle...")
         try:
             sumarios_sugeridos = inferir_sumarios_moodle(
                 sumarios_sugeridos, conteudos_moodle, ficha,
                 provider=provider_llm, modelo=llm_modelo_condensacao, logger=log,
             )
             n_com_sugestao = sum(1 for s in sumarios_sugeridos if s.get("sugestao"))
-            if n_com_sugestao:
-                log.fase(f"  💡 {n_com_sugestao} sumário(s) inferido(s) do Moodle para revisão")
+            log.concluir_fase("sumarios_inf", f"{n_com_sugestao} sugestão(ões) gerada(s)")
         except Exception as e:
-            log.aviso(f"Não foi possível inferir sumários ({e})")
+            log.concluir_fase("sumarios_inf", f"Não foi possível inferir sumários: {e}", ok=False)
 
     # Processar classificação de enunciados Moodle
     enunciados_moodle_bloco = resultado_int.get("enunciados_moodle_bloco", "")
