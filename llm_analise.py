@@ -1299,10 +1299,25 @@ def inferir_sumarios_moodle(
             for act in sec.get("atividades", []):
                 linhas_moodle.append(f"  [{act['tipo']}] {act['nome']}")
 
+    _TIPO_NOMES = {"T": "Teóricas", "TP": "Teórico-Práticas", "PL": "Práticas Laboratoriais",
+                   "OT": "Orientação Tutorial", "S": "Seminários"}
+    tipos_presentes = sorted({a.get("tipo_aula", "") for a in aulas if a.get("tipo_aula")})
+    tipos_desc = ", ".join(
+        f"{t} ({_TIPO_NOMES.get(t, t)})" for t in tipos_presentes
+    )
+
     linhas_aulas = [
-        f"- Aula {a['numero']} — {a.get('data_iso', '')} (turma {a.get('turma', '')})"
+        f"- Aula {a['numero']} [{a.get('tipo_aula', '?')}] — {a.get('data_iso', '')} (turma {a.get('turma', '')})"
         for a in aulas
     ]
+
+    instrucao_tipos = ""
+    if len(tipos_presentes) > 1:
+        instrucao_tipos = (
+            f"\nEsta UC tem os seguintes tipos de aulas: {tipos_desc}. "
+            "Para aulas teóricas (T), o sumário deve focar os conteúdos teóricos apresentados. "
+            "Para aulas teórico-práticas (TP) ou práticas (PL), deve focar as atividades práticas realizadas.\n"
+        )
 
     nome_uc = ficha.get("nome_uc", "")
     user_text = f"""\
@@ -1311,12 +1326,13 @@ UC: {nome_uc}
 Conteúdos do Moodle (por semana):
 {chr(10).join(linhas_moodle)}
 
-Aulas sem sumário:
+Aulas sem sumário (com tipo entre []):
 {chr(10).join(linhas_aulas)}
-
+{instrucao_tipos}
 Para cada aula listada, identifica a semana do Moodle com data mais próxima \
 e sugere um sumário (1-2 frases concisas, sem nomes de estudantes) \
-na mesma língua em que os conteúdos do Moodle estão escritos. \
+na mesma língua em que os conteúdos do Moodle estão escritos, \
+adequado ao tipo de aula. \
 Se não houver conteúdo Moodle correspondente, deixa a sugestão vazia ("").
 
 Responde APENAS com JSON válido, sem texto adicional:
