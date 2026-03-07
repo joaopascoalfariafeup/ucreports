@@ -2621,6 +2621,36 @@ def confirm_submit(job_id: str):
             campos["pv_rel_coment_func"] = edit_funcionamento
         payload["campos"] = campos
 
+    # Aplicar edições de horas
+    horas_prev_list = campos.get("parr_horas_prev", [])
+    if not isinstance(horas_prev_list, list):
+        horas_prev_list = [horas_prev_list]
+    horas_efec_list = campos.get("parr_horas_efec", [])
+    if not isinstance(horas_efec_list, list):
+        horas_efec_list = [horas_efec_list]
+    n_horas = max(len(horas_prev_list), len(horas_efec_list))
+    novas_prev = list(horas_prev_list)
+    novas_efec = list(horas_efec_list)
+    for i in range(n_horas):
+        vp = request.form.get(f"horas_prev_{i}")
+        ve = request.form.get(f"horas_efec_{i}")
+        if vp is not None and i < len(novas_prev):
+            novas_prev[i] = vp.strip()
+        if ve is not None and i < len(novas_efec):
+            novas_efec[i] = ve.strip()
+    if novas_prev != horas_prev_list or novas_efec != horas_efec_list:
+        campos["parr_horas_prev"] = novas_prev
+        campos["parr_horas_efec"] = novas_efec
+        payload["campos"] = campos
+
+    # Filtrar enunciados desmarcados pelo utilizador
+    enunciados_upload = payload.get("enunciados_para_upload", [])
+    if enunciados_upload and any(f"enun_check_{i}" in request.form for i in range(len(enunciados_upload))):
+        payload["enunciados_para_upload"] = [
+            e for i, e in enumerate(enunciados_upload)
+            if request.form.get(f"enun_check_{i}")
+        ]
+
     # Verificar erros de revisão injetados
     review_errors = payload.get("_review_errors")
     if _REVIEW_ERROR_INJECTION and review_errors:
@@ -2794,19 +2824,44 @@ def preview(job_id: str):
             func = payload.get("_funcionamento_com_erros", func)
 
     campos = payload.get("campos", {})
-    horas_prev = _extract_horas_preview(campos, "parr_horas_prev")
-    horas_efec = _extract_horas_preview(campos, "parr_horas_efec")
-    enunciados_upload = payload.get("enunciados_para_upload", [])
+    tipos_aula = campos.get("_tipos_aula") or []
+    horas_prev_list = campos.get("parr_horas_prev", [])
+    horas_efec_list = campos.get("parr_horas_efec", [])
+    if not isinstance(horas_prev_list, list):
+        horas_prev_list = [horas_prev_list]
+    if not isinstance(horas_efec_list, list):
+        horas_efec_list = [horas_efec_list]
+    n_horas = max(len(horas_prev_list), len(horas_efec_list), len(tipos_aula), 1)
+    _input_style = "width:5em;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:0.95em;"
+    _horas_rows = ""
+    for i in range(n_horas):
+        tipo_label = _esc(tipos_aula[i]) if i < len(tipos_aula) else ""
+        vp = _esc(horas_prev_list[i] if i < len(horas_prev_list) else "0")
+        ve = _esc(horas_efec_list[i] if i < len(horas_efec_list) else "0")
+        tipo_html = f"<span style='min-width:3em;display:inline-block;color:#6b7280;'>{tipo_label}</span> " if tipo_label else ""
+        _horas_rows += (
+            f"<div style='display:flex;align-items:center;gap:16px;margin:4px 0;'>"
+            f"{tipo_html}"
+            f"<label style='display:flex;align-items:center;gap:6px;'>"
+            f"Previstas <input type='number' step='0.5' min='0' name='horas_prev_{i}' value='{vp}' form='confirm-form' style='{_input_style}'></label>"
+            f"<label style='display:flex;align-items:center;gap:6px;'>"
+            f"Efetivas <input type='number' step='0.5' min='0' name='horas_efec_{i}' value='{ve}' form='confirm-form' style='{_input_style}'></label>"
+            f"</div>"
+        )
 
+    enunciados_upload = payload.get("enunciados_para_upload", [])
     if enunciados_upload:
         itens_upload = "".join(
-            f"<li>{_esc(e.get('nome', ''))}"
+            f"<li style='margin:4px 0;'>"
+            f"<label style='display:flex;align-items:baseline;gap:8px;'>"
+            f"<input type='checkbox' name='enun_check_{i}' checked form='confirm-form' style='flex-shrink:0;margin-top:2px;'>"
+            f"<span>{_esc(e.get('nome', ''))}"
             f"{' — ' + _esc(e.get('descricao', '')) if e.get('descricao') else ''}"
             f" — <strong>Época:</strong> {_esc(_format_epoca_display(e.get('epoca') or e.get('epoca_cod') or e.get('epoca_codigo')))}"
-            f"</li>"
-            for e in enunciados_upload
+            f"</span></label></li>"
+            for i, e in enumerate(enunciados_upload)
         )
-        html_upload = f"<ul>{itens_upload}</ul>"
+        html_upload = f"<ul style='padding-left:4px;list-style:none;margin:0;'>{itens_upload}</ul>"
     else:
         html_upload = "<p class='muted'>Nenhum enunciado novo para upload.</p>"
 
@@ -2930,8 +2985,8 @@ def preview(job_id: str):
     </div>
 
     <div class="card">
-      <p><b>Nº Horas Previstas:</b> {_esc(horas_prev)}</p>
-      <p><b>Nº Horas Efetivas:</b> {_esc(horas_efec)}</p>
+      <p><b>Nº de Horas</b></p>
+      {_horas_rows}
       <h3>Enunciados a carregar no SIGARRA</h3>
         <div class="upload-list">
             {html_upload}
