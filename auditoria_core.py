@@ -426,23 +426,24 @@ def analisar_uc(
         else:
             log.info(f"  ✓ Todas as {len(sums)} aulas têm sumário.")
 
-    # Filtrar aulas sem sumário para as turmas do docente autenticado
+    # Determinar turmas lecionadas pelo docente autenticado (para filtrar sugestões)
+    turmas_doc: set[str] = set()
     doc_cod = sessao.codigo_pessoal
     if doc_cod and aulas_sem_sumario:
         turmas_doc = extrair_turmas_docente_uc(oc_id, ficha.get("ano_letivo", ""), doc_cod, sessao)
-        if turmas_doc:
-            antes = len(aulas_sem_sumario)
-            aulas_sem_sumario = [a for a in aulas_sem_sumario if a["turma"] in turmas_doc]
-            if len(aulas_sem_sumario) < antes:
-                log.aviso(f"  Sumários por lançar filtrados para as turmas do docente: {', '.join(sorted(turmas_doc))}")
 
     # Obter std_ids das aulas sem sumário (necessário para submissão programática)
+    # Sugestões são geradas apenas para turmas do docente autenticado
+    aulas_para_sugestao = (
+        [a for a in aulas_sem_sumario if a["turma"] in turmas_doc]
+        if turmas_doc else aulas_sem_sumario
+    )
     sumarios_sugeridos: list[dict] = []
-    if aulas_sem_sumario:
+    if aulas_para_sugestao:
         try:
             aulas_adm = extrair_aulas_adm(oc_id, sessao)
             adm_por_numero = {a["numero"]: a for a in aulas_adm}
-            for a in aulas_sem_sumario:
+            for a in aulas_para_sugestao:
                 adm = adm_por_numero.get(a["numero"], {})
                 sumarios_sugeridos.append({
                     **a,
@@ -453,7 +454,7 @@ def analisar_uc(
         except PermissionError:
             # Normal em UCs partilhadas: docente sem acesso admin aos sumários de outras turmas
             log.fase(f"  ⚠ Sem permissão para aceder à administração de sumários (sumarios_adm.inicio) — submissão programática de sumários não disponível para esta UC")
-            aulas_sem_sumario_sem_std = [f"aula {a['numero']} ({a['turma']})" for a in aulas_sem_sumario]
+            aulas_sem_sumario_sem_std = [f"aula {a['numero']} ({a['turma']})" for a in aulas_para_sugestao]
             log.fase(f"    Aulas afectadas: {', '.join(aulas_sem_sumario_sem_std)}")
         except Exception as e:
             log.fase(f"  ⚠ Erro ao obter std_ids para submissão de sumários: {type(e).__name__}: {e}")

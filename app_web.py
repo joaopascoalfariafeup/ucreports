@@ -2885,7 +2885,7 @@ def preview(job_id: str):
           >{sugestao}</textarea>
       </div>""")
             sugestoes_html = f"""
-      <p class="muted" style="margin:10px 0 4px;">Sugestões do Moodle — selecione as que pretende submeter ao SIGARRA:</p>
+      <p class="muted" style="margin:10px 0 4px;">Sugestões do Moodle para aulas por si lecionadas — selecione as que pretende submeter ao SIGARRA:</p>
       {"".join(linhas)}"""
         aviso_sumarios = f"""
     <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
