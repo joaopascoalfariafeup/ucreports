@@ -818,7 +818,7 @@ def analisar_uc(
 
     # Inferir sumários em falta a partir do Moodle
     if sumarios_sugeridos and conteudos_moodle:
-        log.iniciar_fase("sumarios_inf", "A inferir sugestões de sumários a partir do Moodle...")
+        log.iniciar_fase("sumarios_inf", "A inferir sumários a partir do Moodle...")
         try:
             sumarios_sugeridos = inferir_sumarios_moodle(
                 sumarios_sugeridos, conteudos_moodle, ficha,
