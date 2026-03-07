@@ -27,6 +27,7 @@ from sigarra import (
     extrair_form_relatorio, submeter_relatorio,
     calcular_horas_relatorio,
     extrair_aulas_adm, submeter_sumario,
+    extrair_turmas_docente_uc,
 )
 from moodle import extrair_enunciados_moodle, extrair_moodle_uc
 from llm_analise import analisar_uc_integrado, inferir_sumarios_moodle
@@ -424,6 +425,16 @@ def analisar_uc(
             log.aviso(f"{len(sem_sumario)} aula(s) sem sumário.")
         else:
             log.info(f"  ✓ Todas as {len(sums)} aulas têm sumário.")
+
+    # Filtrar aulas sem sumário para as turmas do docente autenticado
+    doc_cod = sessao.codigo_pessoal
+    if doc_cod and aulas_sem_sumario:
+        turmas_doc = extrair_turmas_docente_uc(oc_id, ficha.get("ano_letivo", ""), doc_cod, sessao)
+        if turmas_doc:
+            antes = len(aulas_sem_sumario)
+            aulas_sem_sumario = [a for a in aulas_sem_sumario if a["turma"] in turmas_doc]
+            if len(aulas_sem_sumario) < antes:
+                log.aviso(f"  Sumários por lançar filtrados para as turmas do docente: {', '.join(sorted(turmas_doc))}")
 
     # Obter std_ids das aulas sem sumário (necessário para submissão programática)
     sumarios_sugeridos: list[dict] = []

@@ -58,6 +58,7 @@ SIGARRA_REL_UC_SUB_URL = f"{SIGARRA_BASE}/ucurr_adm.rel_uc_sub"
 SIGARRA_UPLOAD_SANDBOX_URL = f"{SIGARRA_BASE}/gdoc_geral.upload_to_sandbox"
 SIGARRA_CONTEUDOS_URL = f"{SIGARRA_BASE}/conteudos_geral.ver?pct_pag_id={{}}&pct_parametros=pv_ocorrencia_id={{}}"
 SIGARRA_CONTEUDOS_FILE_URL = f"{SIGARRA_BASE}/conteudos_service.conteudos_cont?pct_id={{}}&pv_cod={{}}"
+SIGARRA_CALENDARIOS_EVENTS_URL = "https://sigarra.up.pt/calendarios-api/api/v1/events/feup/uc/{}/"
 
 
 # ---------------------------------------------------------------------------
@@ -834,6 +835,52 @@ def extrair_conteudos_sigarra(
             print(f"  Conteúdos SIGARRA: {f['nome']} ({f['tamanho_kb']} KB)")
 
     return resultado
+
+
+# ---------------------------------------------------------------------------
+# Horário / Calendários API — turmas do docente
+# ---------------------------------------------------------------------------
+
+def extrair_turmas_docente_uc(
+    ocorrencia_id: str,
+    ano_letivo: str,
+    doc_codigo: str,
+    sessao: "SigarraSession",
+) -> set[str]:
+    """Devolve o conjunto de turmas (acronym) lecionadas pelo docente na UC.
+
+    Consulta a API de calendários da U.Porto para determinar quais turmas
+    têm eventos onde o docente com código `doc_codigo` está como responsável.
+
+    Args:
+        ocorrencia_id: Código da ocorrência da UC (ex: "559659").
+        ano_letivo: Ano letivo no formato "AAAA/AAAA" (ex: "2025/2026").
+        doc_codigo: Código mecanográfico do docente (ex: "210006").
+        sessao: Sessão autenticada no SIGARRA.
+
+    Returns:
+        Conjunto de acronyms de turmas (ex: {"1MESW01"}). Conjunto vazio
+        se a API falhar ou o docente não tiver eventos registados.
+    """
+    ano = ano_letivo.split("/")[0].strip()
+    periods = "&".join(f"period={p}" for p in range(1, 9))
+    url = SIGARRA_CALENDARIOS_EVENTS_URL.format(ocorrencia_id) + f"?academic_year={ano}&{periods}"
+    try:
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+        )
+        resp = sessao.http_open(req, timeout=30, context="calendários API")
+        data = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return set()
+
+    cod_prefix = f"{doc_codigo} - "
+    turmas: set[str] = set()
+    for evento in data.get("data", []):
+        if any(p.get("name", "").startswith(cod_prefix) for p in evento.get("persons", [])):
+            for cls in evento.get("classes", []):
+                turmas.add(cls["acronym"])
+    return turmas
 
 
 # ---------------------------------------------------------------------------
