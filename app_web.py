@@ -2968,9 +2968,6 @@ def preview(job_id: str):
         aviso_pautas = ""
 
     body = f"""
-    {aviso_rgpd}
-    {aviso_sumarios}
-    {aviso_pautas}
     <div class="card">
       {uc_titulo}
       <p class="muted">Reveja o conteúdo abaixo antes de submeter ao SIGARRA. Pode editar os campos de texto clicando em «Editar».</p>
@@ -2983,6 +2980,9 @@ def preview(job_id: str):
         ⚫ Sem dados
       </p>
     </div>
+    {aviso_rgpd}
+    {aviso_sumarios}
+    {aviso_pautas}
 
     <div class="card">
       <p><b>Nº de Horas</b></p>
