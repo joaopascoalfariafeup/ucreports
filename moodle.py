@@ -239,17 +239,23 @@ def extrair_conteudos_moodle(course_url: str, sessao: SigarraSession,
 
     # Dividir o HTML pelas fronteiras das secções em vez de usar (.*?) com
     # tags aninhadas (que truncava no primeiro </li> interior).
-    sec_starts = [
-        m.start()
-        for m in re.finditer(
-            r'<li[^>]+class="[^"]*\bsection\b[^"]*"', html,
-        )
-    ]
+    sec_matches = list(re.finditer(
+        r'<li[^>]+class="[^"]*\bsection\b[^"]*"', html,
+    ))
+    sec_starts = [m.start() for m in sec_matches]
+
+    def _tag_has_class(tag: str, cls: str) -> bool:
+        cm = re.search(r'class="([^"]*)"', tag)
+        return bool(cm and re.search(r'\b' + cls + r'\b', cm.group(1)))
 
     for i, start in enumerate(sec_starts):
         # Conteúdo entre esta secção e a próxima (ou fim do HTML)
         end = sec_starts[i + 1] if i + 1 < len(sec_starts) else len(html)
         sec_html = html[start:end]
+
+        # Ignorar secções escondidas (class="... hidden ...")
+        if _tag_has_class(sec_matches[i].group(0), "hidden"):
+            continue
 
         # Nome da secção — extrair todo o conteúdo do elemento sectionname
         nome = ""
@@ -290,6 +296,14 @@ def extrair_conteudos_moodle(course_url: str, sessao: SigarraSession,
             a_start = act_m.end()
             a_end = act_starts[j + 1].start() if j + 1 < len(act_starts) else len(sec_html)
             act_html = sec_html[a_start:a_end]
+
+            # Ignorar atividades escondidas: class="... hidden ..." no <li>
+            # ou class="... hiddenactivity ..." no <div class="activity-item ...">
+            if _tag_has_class(li_tag, "hidden"):
+                continue
+            act_item_m = re.search(r'<div[^>]+class="[^"]*\bactivity-item\b[^"]*"', act_html)
+            if act_item_m and _tag_has_class(act_item_m.group(0), "hiddenactivity"):
+                continue
 
             # Extrair tipo da atividade (várias estratégias por ordem de fiabilidade)
             tipo = ""
