@@ -94,12 +94,15 @@ class AuditoriaLogger:
         self._fase_inicio[nome] = time.monotonic()
         self.fase(f"▸ {msg or f'Início: {nome}'}")
 
-    def concluir_fase(self, nome: str, msg: str = "", ok: bool = True) -> float:
-        """Regista a conclusão de uma fase e devolve a duração em segundos."""
+    def concluir_fase(self, nome: str, msg: str = "", ok: bool | None = True) -> float:
+        """Regista a conclusão de uma fase e devolve a duração em segundos.
+
+        ok=True → ✓ (sucesso), ok=False → ✗ (erro), ok=None → ⚠ (aviso parcial).
+        """
         t0 = self._fase_inicio.pop(nome, None)
         duracao = time.monotonic() - t0 if t0 is not None else 0.0
         texto = msg or f"Concluído: {nome}"
-        icone = "✓" if ok else "✗"
+        icone = "✓" if ok is True else ("⚠" if ok is None else "✗")
         self.fase(f"  {icone} {texto}  [{duracao:.1f}s]")
         return duracao
 

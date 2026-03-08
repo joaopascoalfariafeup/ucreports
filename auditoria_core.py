@@ -504,7 +504,7 @@ def analisar_uc(
                 len(sec.get("atividades", []))
                 for sec in conteudos_moodle["seccoes"]
             )
-            log.concluir_fase("moodle", f"Moodle: {n_atividades} atividades em {len(conteudos_moodle['seccoes'])} secções")
+            log.concluir_fase("moodle", f"{n_atividades} atividades extraídas de {len(conteudos_moodle['seccoes'])} secções")
             for sec in conteudos_moodle["seccoes"]:
                 log.info(f"\n  --- {sec['nome'] or '(sem nome)'} ---")
                 for act in sec.get("atividades", []):
@@ -766,7 +766,7 @@ def analisar_uc(
             log.info(f"  Ano anterior: {inq_anterior['taxa_resposta']}% taxa de resposta")
             if not inq:
                 resumo_inqueritos = f"Inquéritos: sem dados do ano atual; ano anterior ({prev_ano_letivo}) disponível"
-                inqueritos_ok = True
+                inqueritos_ok = None  # aviso parcial — só anterior disponível
         except (ValueError, PermissionError):
             log.info(f"  Inquéritos da ocorrência anterior indisponíveis")
 
