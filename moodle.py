@@ -2261,8 +2261,8 @@ def extrair_moodle_uc(
                 log.info(f"  Curso encontrado por nome: {texto or title}")
                 return extrair_conteudos_moodle(url, sessao, verbosidade=verbosidade, log=log)
 
-    # Sem match — mostrar cursos disponíveis para diagnóstico
-    log.aviso(f"UC não encontrada no Moodle (sigla={sigla_uc!r}, nome={nome_uc!r}).")
+    # Sem match — mostrar cursos disponíveis para diagnóstico (info: pode haver tentativa seguinte)
+    log.info(f"  UC não encontrada neste portal (sigla={sigla_uc!r}, nome={nome_uc!r}).")
     log.info(f"  Cursos disponíveis ({len(cursos)}):")
     for url, texto, title in cursos[:10]:
         log.info(f"    - {title or texto}")

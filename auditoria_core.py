@@ -753,18 +753,19 @@ def analisar_uc(
             else:
                 log.info("  Nenhum comentário disponível.")
 
-        if prev_oc_id:
-            log.info(f"\n  A extrair inquérito do ano anterior ({prev_ano_letivo})...")
-            try:
-                inq_anterior = extrair_inquerito_pedagogico(prev_oc_id, sessao)
-                log.info(f"  Ano anterior: {inq_anterior['taxa_resposta']}% taxa de resposta")
-            except (ValueError, PermissionError) as e:
-                log.aviso(f"Aviso: Inquéritos da ocorrência anterior indisponíveis")
-
     except ValueError as e:
         resumo_inqueritos = f"Inquéritos: indisponíveis"
     except PermissionError as e:
         resumo_inqueritos = f"Inquéritos: indisponíveis"
+
+    # Inquérito do ano anterior — tentar sempre (mesmo que o atual não esteja disponível)
+    if prev_oc_id and inq_anterior is None:
+        log.info(f"\n  A extrair inquérito do ano anterior ({prev_ano_letivo})...")
+        try:
+            inq_anterior = extrair_inquerito_pedagogico(prev_oc_id, sessao)
+            log.info(f"  Ano anterior: {inq_anterior['taxa_resposta']}% taxa de resposta")
+        except (ValueError, PermissionError):
+            log.info(f"  Inquéritos da ocorrência anterior indisponíveis")
 
     log.concluir_fase("inquerito", resumo_inqueritos, ok=inqueritos_ok)
 
