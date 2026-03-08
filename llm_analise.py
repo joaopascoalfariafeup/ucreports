@@ -750,14 +750,16 @@ Código      UC                                                  Aprov/Insc    M
 
 
 def _construir_prompt_inquerito(
-    dados: dict,
+    dados: dict | None,
     dados_anterior: dict | None = None,
     tem_comentarios: bool = False,
 ) -> str:
     """Constrói o bloco de prompt para inquérito pedagógico."""
-    ident = dados.get("identificacao", {})
+    prompt = ""
 
-    prompt = f"""\
+    if dados:
+        ident = dados.get("identificacao", {})
+        prompt = f"""\
 ## Inquérito Pedagógico — Resultados (Ano Atual)
 
 ### Identificação
@@ -776,13 +778,14 @@ def _construir_prompt_inquerito(
 {"Pergunta":<100s}  {"Dimensão":<30s}  {"Alvo":<20s}  {"μ":>5s}  {"Md":>5s}  {"σ":>5s}
 {"-" * 175}
 """
-
-    for p in dados.get("perguntas", []):
-        pergunta = p["pergunta"].replace("unidade curricular", "UC")
-        prompt += (
-            f"{pergunta:<100s}  {p['dimensao']:<30s}  {p['alvo']:<20s}"
-            f"  {p['media']:5.2f}  {p['mediana']:5.1f}  {p['dp']:5.2f}\n"
-        )
+        for p in dados.get("perguntas", []):
+            pergunta = p["pergunta"].replace("unidade curricular", "UC")
+            prompt += (
+                f"{pergunta:<100s}  {p['dimensao']:<30s}  {p['alvo']:<20s}"
+                f"  {p['media']:5.2f}  {p['mediana']:5.1f}  {p['dp']:5.2f}\n"
+            )
+    else:
+        prompt = "## Inquérito Pedagógico\n(sem dados disponíveis para o ano atual)\n"
 
     if dados_anterior:
         ident_ant = dados_anterior.get("identificacao", {})
@@ -1013,7 +1016,7 @@ Não foram encontrados enunciados de avaliação para esta UC.""")
         partes.append("## Resultados / Sucesso Escolar\n(sem dados disponíveis)")
 
     # 6. Inquérito Pedagógico (reutiliza construtor sem instrução final)
-    if inq:
+    if inq or inq_anterior:
         texto_comentarios = None
         if comentarios_bytes:
             texto_comentarios = _extrair_texto_comentarios(comentarios_bytes)

@@ -764,6 +764,9 @@ def analisar_uc(
         try:
             inq_anterior = extrair_inquerito_pedagogico(prev_oc_id, sessao)
             log.info(f"  Ano anterior: {inq_anterior['taxa_resposta']}% taxa de resposta")
+            if not inq:
+                resumo_inqueritos = f"Inquéritos: sem dados do ano atual; ano anterior ({prev_ano_letivo}) disponível"
+                inqueritos_ok = True
         except (ValueError, PermissionError):
             log.info(f"  Inquéritos da ocorrência anterior indisponíveis")
 
