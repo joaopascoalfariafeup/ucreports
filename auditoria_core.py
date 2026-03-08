@@ -359,9 +359,9 @@ def analisar_uc(
         except Exception as e:
             log.fase(f"  ⚠ Ocorrência anterior: {type(e).__name__}: {e}")
     if prev_oc_id:
-        ficha_msg = f"2 fichas extraídas: ocorrências {ano_letivo_corrente} e {prev_ano_letivo}"
+        ficha_msg = f"Ficha extraída: {ano_letivo_corrente}; ocorrência anterior identificada: {prev_ano_letivo}"
     else:
-        ficha_msg = f"1 ficha extraída: ocorrência {ano_letivo_corrente}, sem ocorrência anterior identificada"
+        ficha_msg = f"Ficha extraída: {ano_letivo_corrente}; sem ocorrência anterior identificada"
     log.concluir_fase("ficha", ficha_msg)
 
     # --- Verificação antecipada de sessão SIGARRA ---
