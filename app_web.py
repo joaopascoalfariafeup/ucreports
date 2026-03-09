@@ -1872,7 +1872,7 @@ def privacidade():
       <p>
         Para fins de auditoria técnica, monitorização operacional e controlo de custos de utilização dos serviços LLM,
         são mantidos registos técnicos persistentes contendo apenas metadados de execução, incluindo o código do
-        utilizador, o código da ocorrência da unidade curricular, data e hora da execução, identificador técnico da
+        utilizador, o código da ocorrência da UC, data e hora da execução, identificador técnico da
         operação, modelo utilizado e custo estimado. Não são armazenados conteúdos processados nem credenciais de autenticação.
         Estes registos são utilizados exclusivamente para fins operacionais, de auditoria e gestão de custos.
       </p>
