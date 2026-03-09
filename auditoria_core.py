@@ -829,7 +829,10 @@ def analisar_uc(
                 provider=provider_llm, modelo=llm_modelo_condensacao, logger=log,
             )
             n_com_sugestao = sum(1 for s in sumarios_sugeridos if s.get("sugestao"))
-            log.concluir_fase("sumarios_inf", f"{n_com_sugestao} sugestão(ões) gerada(s)")
+            if n_com_sugestao == 1:
+                log.concluir_fase("sumarios_inf", f"{n_com_sugestao} sugestão gerada")
+            else:
+                log.concluir_fase("sumarios_inf", f"{n_com_sugestao} sugestões geradas")
         except Exception as e:
             log.concluir_fase("sumarios_inf", f"Não foi possível inferir sumários: {e}", ok=False)
 

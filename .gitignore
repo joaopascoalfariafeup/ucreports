@@ -7,5 +7,5 @@ output/
 .claudeignore
 .pids
 *.log
-doc/*.pdf
+doc/
 install.txt
