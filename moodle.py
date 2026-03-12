@@ -1698,6 +1698,61 @@ img {{ width: auto; height: auto; }}
 </html>"""
 
 
+def _extrair_descricao_assign(
+    url: str,
+    nome: str,
+    sessao: "SigarraSession",
+    nome_uc: str = "",
+    ano_letivo: str = "",
+    log: "AuditoriaLogger" = None,
+) -> dict | None:
+    """Extrai a descrição/intro de um assign Moodle como PDF (fallback quando não há ficheiros).
+
+    Usa a mesma lógica de limpeza HTML que as páginas Moodle.
+    """
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        resp = sessao.http_open(req, timeout=30, context=f"assign view {url}")
+        charset = resp.headers.get_content_charset() or "utf-8"
+        html = resp.read().decode(charset, errors="replace")
+    except (urllib.error.URLError, urllib.error.HTTPError) as e:
+        log.aviso(f"      Erro ao aceder ao assign: {e}")
+        return None
+
+    # Tentar extrair a div de descrição específica do assign antes de usar o fallback geral
+    soup = BeautifulSoup(html, "html.parser")
+    intro = (
+        soup.find("div", class_=lambda c: c and "activity-description" in c)
+        or soup.find("div", attrs={"data-region": "intro"})
+        or soup.find("div", class_=lambda c: c and "box" in c and "generalbox" in c)
+    )
+    if intro:
+        # Verificar se tem conteúdo relevante (não só espaços)
+        texto = intro.get_text(strip=True)
+        if len(texto) < 20:
+            log.debug(f"      Descrição do assign muito curta ({len(texto)} chars), ignorada")
+            return None
+
+    html_limpo = _limpar_html_pagina(html, nome, nome_uc=nome_uc, ano_letivo=ano_letivo)
+    pdf_bytes = _html_para_pdf(html_limpo, nome, log)
+
+    if not pdf_bytes:
+        log.aviso(f"      Não foi possível gerar PDF da descrição do assign '{nome}'")
+        return None
+
+    log.info(f"      -> PDF gerado a partir da descrição: {len(pdf_bytes) / 1024:.0f} KB")
+    nome_ficheiro = re.sub(r'[^\w\s\-]', '', nome).strip()[:60] + ".pdf"
+    return {
+        "nome": nome_ficheiro,
+        "descricao": f"Moodle: {nome}",
+        "epoca": "",
+        "data": "",
+        "url": url,
+        "pdf_bytes": pdf_bytes,
+        "origem": "Moodle/assign",
+    }
+
+
 def _extrair_pagina_moodle(
     url: str,
     nome: str,
@@ -2157,7 +2212,10 @@ def extrair_enunciados_moodle(
                     tamanho = len(f["pdf_bytes"]) / 1024
                     log.info(f"      -> PDF encontrado: {f['nome']} [{tamanho:.0f} KB]")
             else:
-                log.info(f"      -> Nenhum PDF encontrado na página do assignment")
+                log.info(f"      -> Nenhum PDF encontrado na página do assignment, a tentar descrição...")
+                resultado = _extrair_descricao_assign(url, nome, sessao, nome_uc=nome_uc, ano_letivo=ano_letivo, log=log)
+                if resultado:
+                    enunciados.append(resultado)
 
         elif tipo == "page":
             resultado = _extrair_pagina_moodle(url, nome, sessao, nome_uc=nome_uc, ano_letivo=ano_letivo, log=log)
