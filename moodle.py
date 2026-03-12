@@ -900,6 +900,8 @@ def _iniciar_preview_quiz(
 
     POST para ``startattempt.php`` — o Moodle cria a tentativa e redireciona
     para ``attempt.php?attempt=X&cmid=Y``.
+    Se o Moodle devolver página de confirmação ("Tem a certeza?"),
+    resubmete automaticamente o formulário.
 
     Returns:
         (attempt_id | None, url_final, html)
@@ -913,9 +915,33 @@ def _iniciar_preview_quiz(
     m = re.search(r'[?&]attempt=(\d+)', url_final)
     if m:
         return m.group(1), url_final, html
-    # fallback: procurar no HTML
     m = re.search(r'attempt=(\d+)', html)
-    return (m.group(1) if m else None), url_final, html
+    if m:
+        return m.group(1), url_final, html
+
+    # Página de confirmação do Moodle ("Tem a certeza que pretende iniciar?")
+    # Extrair todos os campos hidden do formulário e resubmeter
+    soup = BeautifulSoup(html, "html.parser")
+    confirm_form = soup.find("form", action=re.compile(r'startattempt'))
+    if confirm_form:
+        action = confirm_form.get("action", start_url)
+        if not action.startswith("http"):
+            action = urllib.parse.urljoin(start_url, action)
+        fields = {}
+        for inp in confirm_form.find_all("input"):
+            name = inp.get("name")
+            val = inp.get("value", "")
+            if name:
+                fields[name] = val
+        url_final, html = _post_moodle_form(action, fields, sessao)
+        m = re.search(r'[?&]attempt=(\d+)', url_final)
+        if m:
+            return m.group(1), url_final, html
+        m = re.search(r'attempt=(\d+)', html)
+        if m:
+            return m.group(1), url_final, html
+
+    return None, url_final, html
 
 def _extrair_blocos_que(html: str) -> list[str]:
     """Extrai blocos de perguntas (div.que) de uma página HTML do Moodle."""
