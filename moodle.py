@@ -1777,20 +1777,20 @@ def extrair_quiz_moodle(
         charset = resp.headers.get_content_charset() or "utf-8"
         html_view = resp.read().decode(charset, errors="replace")
     except (urllib.error.URLError, urllib.error.HTTPError) as e:
-        log.error(f"      Erro ao aceder ao quiz: {e}")
+        log.erro(f"      Erro ao aceder ao quiz: {e}")
         return None
 
     # 2. Extrair sesskey
     sesskey = _extrair_sesskey_moodle(html_view)
     if not sesskey:
-        log.error(f"      Erro: sesskey não encontrado")
+        log.erro(f"      Erro: sesskey não encontrado")
         return None
 
     # 3. Base URL e CMID
     moodle_base = _moodle_base_url(quiz_url)
     cmid = _extrair_cmid_de_url(quiz_url)
     if not cmid:
-        log.error(f"      Erro: CMID não encontrado no URL")
+        log.erro(f"      Erro: CMID não encontrado no URL")
         return None
 
     # 4. Verificar se o quiz é sumativo e/ou protegido por password
@@ -1831,7 +1831,7 @@ def extrair_quiz_moodle(
             # Sesskey pode mudar após submissão
             sesskey = _extrair_sesskey_moodle(html_view) or sesskey
         except PermissionError as e:
-            log.error(f"      {e}")
+            log.erro(f"      {e}")
             return None
 
     # 6. Tentativa existente?
@@ -1845,10 +1845,10 @@ def extrair_quiz_moodle(
         try:
             attempt_id = _iniciar_preview_quiz(cmid, sesskey, moodle_base, sessao)
         except (urllib.error.URLError, urllib.error.HTTPError) as e:
-            log.error(f"      Erro ao iniciar preview: {e}")
+            log.erro(f"      Erro ao iniciar preview: {e}")
             return None
         if not attempt_id:
-            log.error(f"      Erro: não foi possível iniciar preview")
+            log.erro(f"      Erro: não foi possível iniciar preview")
             return None
         log.debug(f"      Preview iniciado: attempt={attempt_id}")
         novo_preview = True
@@ -1883,7 +1883,7 @@ def extrair_quiz_moodle(
             charset = resp.headers.get_content_charset() or "utf-8"
             html_review = resp.read().decode(charset, errors="replace")
         except (urllib.error.URLError, urllib.error.HTTPError) as e:
-            log.error(f"      Erro ao aceder à review page: {e}")
+            log.erro(f"      Erro ao aceder à review page: {e}")
             return None
         n_perguntas = html_review.count('class="que ')
         log.debug(f"      Review page: {len(html_review)} chars, {n_perguntas} perguntas")
