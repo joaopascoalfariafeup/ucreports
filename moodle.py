@@ -2021,11 +2021,13 @@ def _e_atividade_avaliacao(nome: str, tipo: str) -> bool:
     """
     Determina se uma atividade Moodle é provavelmente de avaliação.
 
-    Regras (mantém a tua filosofia original, mas mais robusta):
-    - assign / quiz: sempre True
+    Regras:
+    - assign / quiz: sempre True (o tipo é suficiente — o nome não importa)
     - resource / url / page / folder / ...: só se tiver indícios de avaliação e não tiver indícios fortes de exclusão
-    - em geral: tokens + frases, evitando falsos positivos por substring
     """
+    if tipo in ("assign", "quiz"):
+        return True
+
     nome_norm = _normalize(nome)
     toks = _tokens(nome_norm)
 
