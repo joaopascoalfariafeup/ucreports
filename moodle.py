@@ -895,14 +895,14 @@ def _iniciar_preview_quiz(
     sesskey: str,
     moodle_base: str,
     sessao: SigarraSession,
-) -> str | None:
+) -> tuple[str | None, str, str]:
     """Inicia uma tentativa de preview do quiz (como docente).
 
     POST para ``startattempt.php`` — o Moodle cria a tentativa e redireciona
     para ``attempt.php?attempt=X&cmid=Y``.
 
     Returns:
-        Attempt ID (string numérica) ou None.
+        (attempt_id | None, url_final, html)
     """
     start_url = f"{moodle_base}/mod/quiz/startattempt.php"
     url_final, html = _post_moodle_form(start_url, {
@@ -912,10 +912,10 @@ def _iniciar_preview_quiz(
 
     m = re.search(r'[?&]attempt=(\d+)', url_final)
     if m:
-        return m.group(1)
+        return m.group(1), url_final, html
     # fallback: procurar no HTML
     m = re.search(r'attempt=(\d+)', html)
-    return m.group(1) if m else None
+    return (m.group(1) if m else None), url_final, html
 
 def _extrair_blocos_que(html: str) -> list[str]:
     """Extrai blocos de perguntas (div.que) de uma página HTML do Moodle."""
@@ -1843,12 +1843,14 @@ def extrair_quiz_moodle(
         # 7. Iniciar preview
         log.info(f"      A iniciar preview...")
         try:
-            attempt_id = _iniciar_preview_quiz(cmid, sesskey, moodle_base, sessao)
+            attempt_id, _preview_url, _preview_html = _iniciar_preview_quiz(cmid, sesskey, moodle_base, sessao)
         except (urllib.error.URLError, urllib.error.HTTPError) as e:
             log.erro(f"      Erro ao iniciar preview: {e}")
             return None
         if not attempt_id:
             log.erro(f"      Erro: não foi possível iniciar preview")
+            log.debug(f"      URL retornado: {_preview_url}")
+            log.debug(f"      HTML retornado (300 chars): {_preview_html[:300]!r}")
             return None
         log.debug(f"      Preview iniciado: attempt={attempt_id}")
         novo_preview = True
