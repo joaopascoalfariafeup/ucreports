@@ -1850,10 +1850,11 @@ def extrair_quiz_moodle(
         if not attempt_id:
             log.erro(f"      Erro: não foi possível iniciar preview")
             log.debug(f"      URL retornado: {_preview_url}")
-            # Extrair texto visível para diagnóstico
-            _txt = re.sub(r'<[^>]+>', ' ', _preview_html)
+            # Extrair texto visível para diagnóstico (sem script/style)
+            _txt = re.sub(r'<(script|style)[^>]*>.*?</\1>', ' ', _preview_html, flags=re.DOTALL | re.IGNORECASE)
+            _txt = re.sub(r'<[^>]+>', ' ', _txt)
             _txt = re.sub(r'\s+', ' ', _txt).strip()
-            log.debug(f"      Texto da resposta (500 chars): {_txt[:500]!r}")
+            log.debug(f"      Texto da resposta (800 chars): {_txt[:800]!r}")
             return None
         log.debug(f"      Preview iniciado: attempt={attempt_id}")
         novo_preview = True
