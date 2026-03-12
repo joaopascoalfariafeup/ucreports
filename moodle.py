@@ -929,6 +929,8 @@ def _iniciar_preview_quiz(
             action = urllib.parse.urljoin(start_url, action)
         fields = {}
         for inp in confirm_form.find_all("input"):
+            if inp.get("type", "").lower() in ("submit", "button", "reset"):
+                continue
             name = inp.get("name")
             val = inp.get("value", "")
             if name:
