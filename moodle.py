@@ -799,10 +799,10 @@ def _quiz_requer_password(html: str) -> bool:
 
 def _extrair_attempt_existente(html: str) -> str | None:
     """Procura um attempt ID existente (review ou em curso) na view page."""
-    m = re.search(r'review\.php\?attempt=(\d+)', html)
+    m = re.search(r'review\.php[^"\']*[?&]attempt=(\d+)', html)
     if m:
         return m.group(1)
-    m = re.search(r'attempt\.php\?attempt=(\d+)', html)
+    m = re.search(r'attempt\.php[^"\']*[?&]attempt=(\d+)', html)
     if m:
         return m.group(1)
     return None
