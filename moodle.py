@@ -1418,10 +1418,24 @@ def _limpar_html_quiz(html: str, nome_quiz: str, nome_uc: str = "",
         r'<div[^>]+class="[^"]*\bqtype_essay_response\b[^"]*"[^>]*>.*?</div>',
         '', html, flags=re.DOTALL | re.IGNORECASE,
     )
-    html = re.sub(
-        r'<div[^>]+class="[^"]*\battachments\b[^"]*"[^>]*>\s*</div>',
-        '', html, flags=re.DOTALL,
-    )
+    # Áreas de anexo e widgets de upload de ficheiros (essay com anexos)
+    # Usar BeautifulSoup para lidar com conteúdo e divs aninhadas
+    try:
+        _soup = BeautifulSoup(html, "html.parser")
+        for _sel, _attr in [
+            ("div", {"class": lambda c: c and "attachments" in c}),
+            ("div", {"class": lambda c: c and "filepicker" in c}),
+            ("div", {"class": lambda c: c and "filemanager" in c}),
+        ]:
+            for _tag in _soup.find_all(_sel, _attr):
+                _tag.decompose()
+        html = str(_soup)
+    except Exception:
+        # Fallback regex para divs de anexo vazias
+        html = re.sub(
+            r'<div[^>]+class="[^"]*\battachments\b[^"]*"[^>]*>\s*</div>',
+            '', html, flags=re.DOTALL,
+        )
 
     # Tags <label> e </label> órfãos (restantes após remoção de questionflag)
     html = re.sub(r'</label>', '', html)
