@@ -257,6 +257,77 @@ class SigarraSession:
 
         return dados
 
+    @classmethod
+    def from_oidc_token(cls, access_token: str, codigo: str) -> "SigarraSession":
+        """Troca access_token OIDC por sessão SIGARRA via GET Bearer.
+
+        Endpoint: https://sigarra.up.pt/auth/oidc/token
+        Requer que o access_token tenha o campo ``aud`` com o identificador
+        do serviço SIGARRA (configuração do Audience Mapper no Keycloak UP).
+
+        Raises:
+            PermissionError: token inválido (HTTP 403) ou sem cookies.
+            RuntimeError: erro HTTP (ex: 500 se aud em falta no token).
+            ConnectionError: erro de rede.
+        """
+        sess = cls.__new__(cls)
+        sess._cookie_jar = http.cookiejar.CookieJar()
+        sess._opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(sess._cookie_jar)
+        )
+        sess._lock = threading.Lock()
+        sess._autenticado = False
+        sess._codigo_pessoal = codigo
+        sess._http_retries = 2
+        sess._http_backoff_base = 0.7
+
+        url = "https://sigarra.up.pt/auth/oidc/token"
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0",
+            "Authorization": f"Bearer {access_token}",
+        })
+        try:
+            with sess._lock:
+                sess._opener.open(req, timeout=15)
+            if not list(sess._cookie_jar):
+                raise PermissionError("SIGARRA não devolveu cookies de sessão para o token OIDC")
+            sess._autenticado = True
+            return sess
+        except urllib.error.HTTPError as e:
+            try:
+                body = e.read().decode("utf-8", errors="replace")[:300]
+            except Exception:
+                body = ""
+            if e.code == 403:
+                raise PermissionError(f"Token OIDC rejeitado (HTTP 403){': ' + body if body else ''}") from e
+            raise RuntimeError(f"Erro HTTP {e.code} ao trocar token OIDC{': ' + body if body else ''}") from e
+        except urllib.error.URLError as e:
+            raise ConnectionError(f"Erro de rede ao contactar endpoint OIDC SIGARRA: {e}") from e
+
+    def clone_para_utilizador(self, codigo: str) -> "SigarraSession":
+        """Cria uma SigarraSession com os cookies desta sessão mas para um utilizador diferente.
+
+        Usado quando o servidor tem a sua própria sessão SIGARRA e o utilizador
+        autenticou por outro mecanismo (ex: Microsoft OAuth, email OTP).
+        Os cookies são copiados cookie a cookie (deepcopy falha em RLock interno do jar).
+        """
+        import copy
+        novo_jar = http.cookiejar.CookieJar()
+        with self._lock:
+            for c in self._cookie_jar:
+                novo_jar.set_cookie(copy.copy(c))
+        nova = SigarraSession.__new__(SigarraSession)
+        nova._cookie_jar = novo_jar
+        nova._opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(novo_jar)
+        )
+        nova._lock = threading.Lock()
+        nova._autenticado = True
+        nova._codigo_pessoal = codigo
+        nova._http_retries = self._http_retries
+        nova._http_backoff_base = self._http_backoff_base
+        return nova
+
     @staticmethod
     def _saml_input_val(html: str, name: str) -> str:
         """Extrai value de um campo de formulário pelo name."""

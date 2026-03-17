@@ -9,6 +9,7 @@ Ponto de entrada Web (localhost) para Assistente de Apoio à Elaboração de Rel
 
 from __future__ import annotations
 
+import base64
 import html
 import io
 import json
@@ -26,6 +27,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Optional
 import urllib.request as _urllib_req
+import urllib.parse
 from urllib.parse import urlparse
 
 from flask import Flask, request, session as flask_session, redirect, url_for, Response, abort, send_file
@@ -73,6 +75,42 @@ _SESSOES_LOCK = threading.Lock()
 # Estados de autenticação federada em curso: token → (SigarraSession, url_destino_actual, saved_username)
 _FED_STATES: dict[str, tuple[SigarraSession, str, str]] = {}
 _FED_STATES_LOCK = threading.Lock()
+
+# Sessão SIGARRA do servidor (partilhada; usada na autenticação OIDC como fallback)
+_SERVER_SESS: Optional[SigarraSession] = None
+_SERVER_SESS_LOCK = threading.Lock()
+
+# Estados OAuth OIDC em curso: state → expires_at
+_OIDC_STATES: dict[str, float] = {}
+_OIDC_STATES_LOCK = threading.Lock()
+
+
+def _oidc_config() -> dict:
+    return {
+        "client_id":     os.environ.get("OIDC_CLIENT_ID",     ""),
+        "client_secret": os.environ.get("OIDC_CLIENT_SECRET", ""),
+        "redirect_uri":  os.environ.get("OIDC_REDIRECT_URI",  ""),
+        "auth_endpoint":    "https://open-id.up.pt/realms/sigarra/protocol/openid-connect/auth",
+        "token_endpoint":   "https://open-id.up.pt/realms/sigarra/protocol/openid-connect/token",
+        "userinfo_endpoint":"https://open-id.up.pt/realms/sigarra/protocol/openid-connect/userinfo",
+    }
+
+
+def _get_server_session() -> SigarraSession:
+    """Devolve sessão SIGARRA do servidor, autenticando na primeira chamada."""
+    global _SERVER_SESS
+    with _SERVER_SESS_LOCK:
+        if _SERVER_SESS is not None and _SERVER_SESS.autenticado:
+            return _SERVER_SESS
+        login    = os.environ.get("SIGARRA_SERVER_LOGIN",    "")
+        password = os.environ.get("SIGARRA_SERVER_PASSWORD", "")
+        if not login or not password:
+            raise RuntimeError("SIGARRA_SERVER_LOGIN/PASSWORD não configurados no .env")
+        sess = SigarraSession()
+        sess.autenticar(login, password)
+        _SERVER_SESS = sess
+        return _SERVER_SESS
+
 
 # Cache de dados de serviço docente (muito estáveis, mudam 1-2x/ano)
 # chave: (doc_codigo, ano_letivo); valor: (timestamp, anos_disponiveis, ucs_list, meta)
@@ -1769,7 +1807,8 @@ def login():
           <button id="btn-login" type="submit">Autenticar</button>
         </div>
         <p class="muted" style="margin-top:12px;">
-          Ou <a href="{url_for('login_federado')}">Autenticação federada</a>
+          Ou <a href="{url_for('login_oidc')}">Autenticação federada</a>
+          | <a href="{url_for('login_federado')}">Autenticação federada (legacy)</a>
         </p>
         <p class="muted"><a href="{url_for('privacidade')}">Política de privacidade e proteção de dados</a></p>
       </form>
@@ -1809,13 +1848,12 @@ def privacidade():
           As credenciais não são guardadas em disco nem registadas em logs.
         </li>
         <li>
-          <b>Autenticação federada (Shibboleth/SAML2):</b> o fluxo de autenticação é iniciado via
-          Shibboleth/SAML2 com o Fornecedor de Identidade da Universidade do Porto (wayf.up.pt).
-          Por razões técnicas (necessidade de sessão HTTP do lado do servidor para acesso à API SIGARRA),
-          as credenciais introduzidas no formulário do IdP transitam pelo servidor desta aplicação antes
-          de serem reencaminhadas para o IdP — tal como num proxy HTTPS. As credenciais são transmitidas
-          exclusivamente sobre HTTPS, não são guardadas em disco e não são registadas em logs.
-          Apenas a asserção SAML resultante é utilizada para estabelecer a sessão.
+          <b>Autenticação federada (OpenID Connect):</b> as credenciais são submetidas diretamente ao
+          Fornecedor de Identidade da Universidade do Porto (via Keycloak/open-id.up.pt), através de um
+          formulário servido por essa infraestrutura. A aplicação nunca recebe nem processa as credenciais
+          — apenas recebe a asserção OIDC emitida pelo IdP após autenticação bem-sucedida. Este mecanismo
+          oferece garantias de privacidade adicionais, uma vez que as credenciais do utilizador não passam
+          pelos servidores desta aplicação.
         </li>
       </ul>
       <p>
@@ -2153,6 +2191,148 @@ def login_federado_relay():
     relay_url = url_for("login_federado_relay", _external=True)
     proxied = _proxy_saml_html(html_next, relay_url, token)
     return Response(proxied, content_type="text/html; charset=utf-8")
+
+
+@app.get("/login/oidc")
+def login_oidc():
+    """Inicia o fluxo OIDC redirecionando para Keycloak UP."""
+    cfg = _oidc_config()
+    if not cfg["client_id"]:
+        return _page("Erro", """<div class="card"><p>Autenticação federada OIDC não configurada.</p></div>""")
+
+    # Gerar estado CSRF com expiração de 5 minutos
+    with _OIDC_STATES_LOCK:
+        now = time.time()
+        for k in [k for k, v in _OIDC_STATES.items() if v < now]:
+            del _OIDC_STATES[k]
+        state = secrets.token_urlsafe(24)
+        _OIDC_STATES[state] = now + 300
+
+    params = urllib.parse.urlencode({
+        "client_id":     cfg["client_id"],
+        "response_type": "code",
+        "redirect_uri":  cfg["redirect_uri"],
+        "scope":         "openid email profile",
+        "state":         state,
+        "response_mode": "query",
+        "kc_idp_hint":   "saml",
+    })
+    resp = Response("", status=302)
+    resp.headers["Location"] = f"{cfg['auth_endpoint']}?{params}"
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
+
+
+@app.get("/login/oidc/callback")
+def login_oidc_callback():
+    """Callback OIDC: troca code por tokens, obtém sessão SIGARRA."""
+    cfg = _oidc_config()
+
+    error = request.args.get("error")
+    if error:
+        desc = request.args.get("error_description", "")
+        return _page("Autenticação Federada", f"""
+        <div class="card">
+          <p><b>Erro na autenticação:</b> {_esc(desc or error)}</p>
+          <p><a href="{url_for('login')}">Voltar ao login</a></p>
+        </div>""")
+
+    code  = request.args.get("code",  "").strip()
+    state = request.args.get("state", "").strip()
+
+    with _OIDC_STATES_LOCK:
+        if not state or _OIDC_STATES.pop(state, 0) < time.time():
+            return _page("Autenticação Federada", f"""
+            <div class="card">
+              <p><b>Sessão expirada ou inválida.</b></p>
+              <p><a href="{url_for('login_oidc')}">Tentar novamente</a></p>
+            </div>""")
+
+    # Trocar authorization_code por tokens
+    try:
+        payload = urllib.parse.urlencode({
+            "grant_type":   "authorization_code",
+            "code":          code,
+            "redirect_uri":  cfg["redirect_uri"],
+            "client_id":     cfg["client_id"],
+            "client_secret": cfg["client_secret"],
+        }).encode()
+        req = _urllib_req.Request(
+            cfg["token_endpoint"],
+            data=payload,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        with _urllib_req.urlopen(req, timeout=15) as resp:
+            token_data = json.loads(resp.read().decode())
+    except Exception as e:
+        app.logger.warning("login_oidc_callback: erro ao trocar token: %s", e)
+        return _page("Autenticação Federada", f"""
+        <div class="card">
+          <p><b>Erro ao contactar servidor de autenticação:</b> {_esc(str(e))}</p>
+          <p><a href="{url_for('login_oidc')}">Tentar novamente</a></p>
+        </div>""")
+
+    # Extrair preferred_username do id_token (JWT)
+    username = ""
+    id_token = token_data.get("id_token", "")
+    if id_token:
+        try:
+            parts = id_token.split(".")
+            if len(parts) >= 2:
+                padded = parts[1] + "=" * (4 - len(parts[1]) % 4)
+                claims = json.loads(base64.urlsafe_b64decode(padded))
+                username = claims.get("preferred_username") or claims.get("sub") or ""
+        except Exception:
+            pass
+
+    # Normalizar: "up210006@up.pt" → "210006"
+    if "@" in username:
+        username = username.split("@")[0]
+    if username.lower().startswith("up"):
+        codigo = username[2:]
+    else:
+        codigo = username
+
+    if not codigo:
+        return _page("Autenticação Federada", f"""
+        <div class="card">
+          <p><b>Não foi possível identificar o utilizador UP.</b></p>
+          <p><a href="{url_for('login')}">Usar login SIGARRA</a></p>
+        </div>""")
+
+    # Tentar obter sessão SIGARRA via access_token Bearer
+    user_sess = None
+    flask_session.pop("oidc_sess_debug", None)
+    _at = token_data.get("access_token", "")
+    try:
+        user_sess = SigarraSession.from_oidc_token(_at, codigo)
+        flask_session["oidc_sess_debug"] = "ok"
+        app.logger.info("login_oidc_callback: sessão SIGARRA obtida para %s", codigo)
+    except Exception as e:
+        app.logger.warning("login_oidc_callback: %s", e)
+        flask_session["oidc_sess_debug"] = str(e)
+
+    # Fallback: clonar sessão do servidor
+    if user_sess is None:
+        try:
+            server_sess = _get_server_session()
+        except Exception as e:
+            app.logger.warning("login_oidc_callback: sessão servidor indisponível: %s", e)
+            return _page("Autenticação Federada", f"""
+            <div class="card">
+              <p><b>Serviço temporariamente indisponível.</b> Tente mais tarde.</p>
+              <p><a href="{url_for('login')}">Usar login SIGARRA</a></p>
+            </div>""")
+        user_sess = server_sess.clone_para_utilizador(codigo)
+        flask_session["oidc_sess_type"] = "clone"
+    else:
+        flask_session["oidc_sess_type"] = "direct"
+
+    _set_sigarra_session(user_sess)
+    flask_session["sigarra_login"] = username + "@up.pt" if "@" not in username else username
+    flask_session["login_method"] = "oidc"
+    return redirect(url_for("ucs"))
 
 
 @app.get("/logout")
