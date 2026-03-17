@@ -31,8 +31,6 @@ import urllib.parse
 from urllib.parse import urlparse
 
 from flask import Flask, request, session as flask_session, redirect, url_for, Response, abort, send_file
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
 from sigarra import SigarraSession, load_env
 from logger import AuditoriaLogger
@@ -46,13 +44,6 @@ load_env()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("WEB_SECRET_KEY") or secrets.token_hex(32)
-
-_limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=[],          # sem limite global — só nos endpoints específicos
-    storage_uri="memory://",
-)
 
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -71,10 +62,6 @@ OUTPUT_DIR = (
 # armazenamento in-memory (local/single-user)
 _SESSOES: dict[str, SigarraSession] = {}
 _SESSOES_LOCK = threading.Lock()
-
-# Estados de autenticação federada em curso: token → (SigarraSession, url_destino_actual, saved_username)
-_FED_STATES: dict[str, tuple[SigarraSession, str, str]] = {}
-_FED_STATES_LOCK = threading.Lock()
 
 # Sessão SIGARRA do servidor (partilhada; usada na autenticação OIDC como fallback)
 _SERVER_SESS: Optional[SigarraSession] = None
@@ -1786,35 +1773,15 @@ def home():
 
 @app.get("/login")
 def login():
-    csrf = _get_csrf_token()
-
     body = f"""
-    <div class="card">
-      <form id="login-form" method="post" action="{url_for('login_post')}">
-        <input type="hidden" name="csrf_token" value="{_esc(csrf)}">
-        <div class="row" style="align-items:center; gap:10px; max-width:400px;">
-          <label style="width:78px; min-width:78px;">Utilizador:</label>
-          <div class="input-with-suffix" style="width:220px;">
-            <input name="login" autocomplete="username" required>
-            <span class="input-suffix">@fe.up.pt</span>
-          </div>
-        </div>
-        <div class="row" style="margin-top:10px; align-items:center; gap:10px; max-width:400px;">
-          <label style="width:78px; min-width:78px;">Senha:</label>
-          <input name="password" type="password" autocomplete="current-password" style="width:220px; max-width:100%;" required>
-        </div>
-        <div class="row" style="margin-top:14px;">
-          <button id="btn-login" type="submit">Autenticar</button>
-        </div>
-        <p class="muted" style="margin-top:12px;">
-          Ou <a href="{url_for('login_oidc')}">Autenticação federada</a>
-          | <a href="{url_for('login_federado')}">Autenticação federada (legacy)</a>
-        </p>
-        <p class="muted"><a href="{url_for('privacidade')}">Política de privacidade e proteção de dados</a></p>
-      </form>
+    <div class="card" style="text-align:center;">
+      <p style="margin-top:14px;">
+        <a href="{url_for('login_oidc')}" style="font-size:1.1em;">Autenticação Federada U.Porto</a>
+      </p>
+      <p class="muted"><a href="{url_for('privacidade')}">Política de privacidade e proteção de dados</a></p>
     </div>
     """
-    return _page("Login no SIGARRA", body)
+    return _page("Login", body)
 
 
 @app.get("/privacidade")
@@ -1837,25 +1804,14 @@ def privacidade():
         curriculares (UCs) para as quais o utilizador autenticado possui permissões institucionais de regência.
       </p>
 
-      <h4>Credenciais e comunicação segura</h4>
+      <h4>Autenticação e comunicação segura</h4>
       <p>
-        A aplicação disponibiliza dois mecanismos de autenticação:
+        A autenticação é efetuada exclusivamente através de <b>Autenticação Federada (OpenID Connect)</b>:
+        as credenciais são submetidas diretamente ao Fornecedor de Identidade da Universidade do Porto
+        (via Keycloak/open-id.up.pt), através de um formulário servido por essa infraestrutura.
+        A aplicação nunca recebe nem processa as credenciais do utilizador — apenas recebe um token
+        de autenticação emitido pelo IdP após autenticação bem-sucedida.
       </p>
-      <ul>
-        <li>
-          <b>Autenticação direta (SIGARRA):</b> as credenciais introduzidas são usadas apenas para estabelecer
-          uma sessão segura no SIGARRA e no Moodle (a partir do SIGARRA através do mecanismo SSO).
-          As credenciais não são guardadas em disco nem registadas em logs.
-        </li>
-        <li>
-          <b>Autenticação federada (OpenID Connect):</b> as credenciais são submetidas diretamente ao
-          Fornecedor de Identidade da Universidade do Porto (via Keycloak/open-id.up.pt), através de um
-          formulário servido por essa infraestrutura. A aplicação nunca recebe nem processa as credenciais
-          — apenas recebe a asserção OIDC emitida pelo IdP após autenticação bem-sucedida. Este mecanismo
-          oferece garantias de privacidade adicionais, uma vez que as credenciais do utilizador não passam
-          pelos servidores desta aplicação.
-        </li>
-      </ul>
       <p>
         Toda a comunicação entre o utilizador e a aplicação é protegida através de ligações cifradas (HTTPS/TLS),
         assegurando a confidencialidade e integridade dos dados em trânsito.
@@ -1932,265 +1888,6 @@ def privacidade():
     """
     return _page("Política de privacidade e proteção de dados", body)
 
-
-
-@app.post("/login")
-@_limiter.limit("10 per minute; 30 per hour")
-def login_post():
-    _require_csrf()
-    login = request.form.get("login", "").strip()
-    password = request.form.get("password", "")
-
-    sess = SigarraSession()
-    try:
-        sess.autenticar(login=login, password=password)
-    except Exception as e:
-        return _page("Login no SIGARRA", f"""
-        <div class="card">
-          <p><b>Falha na autenticação:</b> {_esc(e)}</p>
-          <p><a href="{url_for('login')}">Voltar</a></p>
-        </div>
-        """)
-
-    _set_sigarra_session(sess)
-    flask_session["sigarra_login"] = login
-    return redirect(url_for("ucs"))
-
-
-_SAML_ASSET_PREFIX = "/login/federado/proxy"
-_SAML_ASSET_BASE = "https://wayf.up.pt"
-
-
-def _proxy_saml_html(html: str, relay_url: str, token: str) -> str:
-    """Prepara HTML do IdP para proxy: encaminha recursos estáticos pelo nosso servidor
-    (evita CORS/mixed-content), redireciona form action e adiciona token de estado."""
-    pfx = _SAML_ASSET_PREFIX
-    # Remover meta CSP — poderia bloquear scripts ou recursos cross-origin
-    html = re.sub(r'<meta[^>]+http-equiv=["\']?Content-Security-Policy["\']?[^>]*/?>', '', html, flags=re.IGNORECASE)
-    # Reescrever href/src com caminho absoluto para passarem pelo nosso proxy de assets.
-    # Não reescrevemos action= aqui — é tratado abaixo com relay_url.
-    html = re.sub(r'((?:href|src)=")(/[^"]*)', rf'\1{pfx}\2', html, flags=re.IGNORECASE)
-    html = re.sub(r"((?:href|src)=')(/[^']*)", rf"\1{pfx}\2", html, flags=re.IGNORECASE)
-    # url() em blocos <style> e atributos style inline
-    html = re.sub(r'(url\(["\']?)(/[^"\')\s]*)', rf'\1{pfx}\2', html)
-    # Injetar base href para URLs verdadeiramente relativas (sem /)
-    base_tag = f'<base href="{_SAML_ASSET_BASE}/">'
-    html = re.sub(r'(<head[^>]*>)', r'\1' + base_tag, html, count=1, flags=re.IGNORECASE)
-    if '<base ' not in html:
-        html = base_tag + html
-    # Redirecionar form action para o relay
-    html = re.sub(
-        r'(<form\b[^>]*\baction=)["\'][^"\']*["\']',
-        rf'\1"{relay_url}"',
-        html, count=1, flags=re.IGNORECASE,
-    )
-    # Desativar botões que iniciam fluxos externos não suportados pelo proxy
-    # (ex: "Autenticação.gov" redireciona para portal governo que requer interação direta)
-    html = re.sub(
-        r'(<button\b[^>]*\bname=["\']_eventId_authn/[^"\']+["\'])([^>]*>)',
-        r'\1 disabled title="Não disponível nesta interface"\2',
-        html, flags=re.IGNORECASE,
-    )
-    # Desativar checkboxes que interferem com o fluxo proxy:
-    # - _shib_idp_revokeConsent: revogação corre com cookies server-side (não do browser),
-    #   deixando os cookies wayf.up.pt do browser em estado inconsistente.
-    # - donotcache: pode igualmente corromper o estado da sessão do IdP no contexto proxy.
-    for _cb_name in ("_shib_idp_revokeConsent", "donotcache"):
-        html = re.sub(
-            rf'(<input\b[^>]*\bname=["\']{re.escape(_cb_name)}["\'][^>]*)',
-            r'\1 disabled title="Não disponível nesta interface"',
-            html, flags=re.IGNORECASE,
-        )
-    # Injetar campo oculto com token antes de </form>
-    html = html.replace('</form>', f'<input type="hidden" name="_fed_token" value="{token}"></form>', 1)
-    return html
-
-
-@app.get("/login/federado/proxy/<path:asset_path>")
-def federado_asset_proxy(asset_path: str):
-    """Proxy de recursos estáticos do IdP (CSS, JS, imagens).
-    Serve os assets no mesmo origin que o formulário proxiado, evitando problemas
-    de CORS, mixed-content e cookies de sessão do IdP."""
-    url = f"{_SAML_ASSET_BASE}/{asset_path}"
-    try:
-        req = _urllib_req.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-        resp = _urllib_req.urlopen(req, timeout=10)
-        content = resp.read()
-        content_type = resp.headers.get("Content-Type", "application/octet-stream")
-        # Para CSS: reescrever também os url() com caminhos absolutos dentro do ficheiro
-        if "text/css" in content_type:
-            charset = resp.headers.get_content_charset() or "utf-8"
-            css = content.decode(charset, errors="replace")
-            css = re.sub(r'(url\(["\']?)(/[^"\')\s]*)', rf'\1{_SAML_ASSET_PREFIX}\2', css)
-            content = css.encode("utf-8")
-            content_type = "text/css; charset=utf-8"
-        r = Response(content, content_type=content_type)
-        r.headers["Cache-Control"] = "public, max-age=3600"
-        return r
-    except Exception:
-        abort(404)
-
-
-@app.get("/login/federado")
-def login_federado():
-    sess = SigarraSession()
-    try:
-        html_e1s2, url_e1s2 = sess.autenticar_federado_iniciar()
-    except Exception as e:
-        return _page("Autenticação Federada UP", f"""
-        <div class="card">
-          <p><b>Falha ao iniciar autenticação federada:</b> {_esc(str(e))}</p>
-          <p><a href="{url_for('login')}">Voltar ao login</a></p>
-        </div>
-        """)
-
-    form_action = SigarraSession._saml_form_action(html_e1s2, url_e1s2)
-    token = secrets.token_urlsafe(16)
-    with _FED_STATES_LOCK:
-        _FED_STATES[token] = (sess, form_action, "")
-
-    # Mostrar o formulário real do IdP (proxiado com estilos corrigidos)
-    relay_url = url_for("login_federado_relay", _external=True)
-    proxied = _proxy_saml_html(html_e1s2, relay_url, token)
-    return Response(proxied, content_type="text/html; charset=utf-8")
-
-
-@app.post("/login/federado")
-def login_federado_relay():
-    token = request.form.get("_fed_token", "").strip()
-    with _FED_STATES_LOCK:
-        state = _FED_STATES.get(token)
-    if not state:
-        return _page("Autenticação Federada UP", f"""
-        <div class="card">
-          <p><b>Sessão de autenticação inválida ou expirada.</b></p>
-          <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-        </div>
-        """)
-
-    sess, forward_url, saved_username = state
-
-    # Reencaminhar todos os campos do browser para o IdP, menos o nosso token de estado.
-    # O formulário proxiado já inclui o csrf_token do IdP como campo oculto.
-    form_data = {k: v for k, v in request.form.items() if k != "_fed_token"}
-    # Capturar username para determinar código pessoal após autenticação
-    username_hint = form_data.get("j_username", "").strip() or saved_username
-
-    try:
-        html_next, url_next = sess._saml_request(forward_url, post_data=form_data, referer=forward_url)
-    except Exception as e:
-        with _FED_STATES_LOCK:
-            _FED_STATES.pop(token, None)
-        return _page("Autenticação Federada UP", f"""
-        <div class="card">
-          <p><b>Falha na comunicação com o IdP:</b> {_esc(str(e))}</p>
-          <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-        </div>
-        """)
-
-    # Resolver sondas localStorage server-side (ex: "Saving Session Information" pós-login).
-    # O browser não consegue auto-submeter este formulário JS através do proxy,
-    # por isso simulamos as mesmas respostas que o iniciar() usa para e1s1.
-    ls_iter = 0
-    while "shib_idp_ls_success" in html_next and ls_iter < 5:
-        ls_iter += 1
-        if SigarraSession._saml_input_val(html_next, "SAMLResponse"):
-            break
-        ls_action = SigarraSession._saml_form_action(html_next, url_next)
-        ls_data = {
-            "csrf_token": SigarraSession._saml_input_val(html_next, "csrf_token"),
-            "shib_idp_ls_exception.shib_idp_session_ss": "",
-            "shib_idp_ls_success.shib_idp_session_ss": "true",
-            "shib_idp_ls_value.shib_idp_session_ss": "",
-            "shib_idp_ls_exception.shib_idp_persistent_ss": "",
-            "shib_idp_ls_success.shib_idp_persistent_ss": "true",
-            "shib_idp_ls_value.shib_idp_persistent_ss": "",
-            "shib_idp_ls_supported": "true",
-            "_eventId_proceed": "",
-        }
-        try:
-            html_next, url_next = sess._saml_request(ls_action, post_data=ls_data, referer=url_next)
-        except Exception as e:
-            with _FED_STATES_LOCK:
-                _FED_STATES.pop(token, None)
-            return _page("Autenticação Federada UP", f"""
-            <div class="card">
-              <p><b>Falha na sonda de sessão do IdP:</b> {_esc(str(e))}</p>
-              <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-            </div>
-            """)
-
-    # Se a resposta traz SAMLResponse → autenticação completa
-    if SigarraSession._saml_input_val(html_next, "SAMLResponse"):
-        try:
-            sess.autenticar_federado_completar(html_next, url_next, username=username_hint)
-        except Exception as e:
-            with _FED_STATES_LOCK:
-                _FED_STATES.pop(token, None)
-            return _page("Autenticação Federada UP", f"""
-            <div class="card">
-              <p><b>Falha na autenticação:</b> {_esc(str(e))}</p>
-              <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-            </div>
-            """)
-        # codigo_pessoal é extraído da página inicial do SIGARRA após auth.
-        # Se for None, a sessão não estabeleceu acesso real ao SIGARRA.
-        if not sess.codigo_pessoal:
-            with _FED_STATES_LOCK:
-                _FED_STATES.pop(token, None)
-            return _page("Autenticação Federada UP", f"""
-            <div class="card">
-              <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
-              <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
-              <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-            </div>
-            """)
-        # Verificar que a sessão dá acesso a páginas privadas.
-        # vig_geral.docentes_vigilancias_list retorna HTTP 200 com "Não tem permissões"
-        # no corpo quando a sessão é inválida (ex: fluxo de consentimento com wayf.up.pt).
-        if sess.codigo_pessoal:
-            try:
-                _check_html = sess.fetch_html(
-                    f"https://sigarra.up.pt/feup/pt/vig_geral.docentes_vigilancias_list"
-                    f"?p_func_codigo={sess.codigo_pessoal}"
-                )
-                if "Não tem permissões" in _check_html:
-                    with _FED_STATES_LOCK:
-                        _FED_STATES.pop(token, None)
-                    return _page("Autenticação Federada UP", f"""
-                    <div class="card">
-                      <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
-                      <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
-                      <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-                    </div>
-                    """)
-            except PermissionError:
-                with _FED_STATES_LOCK:
-                    _FED_STATES.pop(token, None)
-                return _page("Autenticação Federada UP", f"""
-                <div class="card">
-                  <p><b>Sessão SIGARRA inválida após autenticação.</b></p>
-                  <p>Faça logout completo do SIGARRA no browser e tente novamente.</p>
-                  <p><a href="{url_for('login_federado')}">Recomeçar</a></p>
-                </div>
-                """)
-            except Exception:
-                pass  # erro de rede transitório — não bloquear o login
-        with _FED_STATES_LOCK:
-            _FED_STATES.pop(token, None)
-        _set_sigarra_session(sess)
-        # Guardar username original (ex: "jpf@fe.up.pt") para o bypass de custos funcionar
-        # com configuração por nome curto; fallback para o código numérico
-        flask_session["sigarra_login"] = username_hint or sess.codigo_pessoal or ""
-        return redirect(url_for("ucs"))
-
-    # Página intermédia (MFA, consentimento, etc.) — re-proxiar
-    next_action = SigarraSession._saml_form_action(html_next, url_next)
-    with _FED_STATES_LOCK:
-        _FED_STATES[token] = (sess, next_action, username_hint)
-    relay_url = url_for("login_federado_relay", _external=True)
-    proxied = _proxy_saml_html(html_next, relay_url, token)
-    return Response(proxied, content_type="text/html; charset=utf-8")
 
 
 @app.get("/login/oidc")
