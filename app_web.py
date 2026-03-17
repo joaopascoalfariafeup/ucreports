@@ -1774,7 +1774,7 @@ def home():
 @app.get("/login")
 def login():
     body = f"""
-    <div class="card" style="text-align:center;">
+    <div class="card">
       <p style="margin-top:14px;">
         <a href="{url_for('login_oidc')}" style="font-size:1.1em;">Autenticação Federada U.Porto</a>
       </p>
