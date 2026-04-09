@@ -15,7 +15,7 @@ from pathlib import Path
 from pypdf import PdfReader
 
 from sigarra import (
-    SigarraSession, SIGARRA_BASE, extrair_ficha_uc, extrair_sumarios,
+    SigarraSession, SIGARRA_BASE, sigarra_url_oc, extrair_ficha_uc, extrair_sumarios,
     extrair_resultados_uc, extrair_resultados_curso,
     extrair_pautas_uc, verificar_estudantes_sem_classificacao,
     extrair_enunciados_avaliacao,
@@ -471,8 +471,8 @@ def analisar_uc(
     if sessao.codigo_pessoal:
         # Portais como fallback: ano corrente e depois ano anterior
         _urls_moodle += [
-            f"{SIGARRA_BASE}/moodle_portal.go_moodle_portal_up?p_codigo={sessao.codigo_pessoal}",
-            f"{SIGARRA_BASE}/moodle_portal.go_moodle_portal?p_codigo={sessao.codigo_pessoal}",
+            sigarra_url_oc(f"{SIGARRA_BASE}/moodle_portal.go_moodle_portal_up?p_codigo={sessao.codigo_pessoal}", oc_id),
+            sigarra_url_oc(f"{SIGARRA_BASE}/moodle_portal.go_moodle_portal?p_codigo={sessao.codigo_pessoal}", oc_id),
         ]
     if _urls_moodle:
         log.iniciar_fase("moodle", "Extrair atividades do Moodle...")
@@ -675,7 +675,7 @@ def analisar_uc(
         if curso_id and ano_letivo_num:
             log.info(f"\n  A extrair resultados das UCs do curso...")
             try:
-                todas_ucs = extrair_resultados_curso(curso_id, ano_letivo_num, sessao)
+                todas_ucs = extrair_resultados_curso(curso_id, ano_letivo_num, sessao, ocorrencia_id=oc_id)
                 pares_curso = [
                     uc for uc in todas_ucs
                     if uc.get("media_aprovados") is not None
@@ -698,7 +698,7 @@ def analisar_uc(
         if not pautas:
             log.info("  Sem pautas disponíveis.")
         for p in pautas:
-            sem = verificar_estudantes_sem_classificacao(p["pauta_id"], sessao)
+            sem = verificar_estudantes_sem_classificacao(p["pauta_id"], sessao, ocorrencia_id=oc_id)
             if sem is None:
                 log.aviso(f"{p['epoca']}: não foi possível determinar classificações pendentes")
             elif sem == 0:

@@ -43,8 +43,10 @@ from logger import AuditoriaLogger
 # Diretório do script (para localizar .env)
 _SCRIPT_DIR = Path(__file__).resolve().parent
 
-# URLs do SIGARRA
-SIGARRA_BASE = "https://sigarra.up.pt/feup/pt"
+# URLs do SIGARRA — constantes usam "feup" como default; para UCs de outras
+# faculdades, sigarra_url_oc() substitui pelo código correto.
+SIGARRA_INST_DEFAULT = "feup"
+SIGARRA_BASE = f"https://sigarra.up.pt/{SIGARRA_INST_DEFAULT}/pt"
 SIGARRA_AUTH_URL = f"{SIGARRA_BASE}/mob_val_geral.autentica"
 SIGARRA_UC_URL = f"{SIGARRA_BASE}/UCURR_GERAL.FICHA_UC_VIEW?pv_ocorrencia_id={{}}"
 SIGARRA_SUMARIOS_URL = f"{SIGARRA_BASE}/sumarios_geral.ver?pv_ocorrencia_id={{}}"
@@ -58,7 +60,19 @@ SIGARRA_REL_UC_SUB_URL = f"{SIGARRA_BASE}/ucurr_adm.rel_uc_sub"
 SIGARRA_UPLOAD_SANDBOX_URL = f"{SIGARRA_BASE}/gdoc_geral.upload_to_sandbox"
 SIGARRA_CONTEUDOS_URL = f"{SIGARRA_BASE}/conteudos_geral.ver?pct_pag_id={{}}&pct_parametros=pv_ocorrencia_id={{}}"
 SIGARRA_CONTEUDOS_FILE_URL = f"{SIGARRA_BASE}/conteudos_service.conteudos_cont?pct_id={{}}&pv_cod={{}}"
-SIGARRA_CALENDARIOS_EVENTS_URL = "https://sigarra.up.pt/calendarios-api/api/v1/events/feup/uc/{}/"
+SIGARRA_CALENDARIOS_EVENTS_URL = f"https://sigarra.up.pt/calendarios-api/api/v1/events/{SIGARRA_INST_DEFAULT}/uc/{{}}/"
+
+# Cache: ocorrencia_id → código da faculdade (ex: "fcup", "fmup").
+# Preenchido por extrair_ficha_uc() na primeira vez que se acede à UC.
+_OC_INST: dict[str, str] = {}
+
+
+def sigarra_url_oc(url: str, ocorrencia_id: str) -> str:
+    """Substitui a faculdade default na URL pela faculdade da ocorrência, se diferente."""
+    inst = _OC_INST.get(str(ocorrencia_id), SIGARRA_INST_DEFAULT)
+    if inst != SIGARRA_INST_DEFAULT:
+        url = url.replace(f"/{SIGARRA_INST_DEFAULT}/", f"/{inst}/", 1)
+    return url
 
 
 # ---------------------------------------------------------------------------
@@ -460,14 +474,20 @@ class SigarraSession:
             except Exception:
                 self._codigo_pessoal = None
 
-    def fetch_html(self, url: str, timeout: int = 30) -> str:
-        """Descarrega uma página do SIGARRA (com cookies de sessão)."""
+    def fetch_html(self, url: str, timeout: int = 30, return_url: bool = False):
+        """Descarrega uma página do SIGARRA (com cookies de sessão).
+
+        Se return_url=True, devolve (html, url_final) em vez de apenas html.
+        """
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
 
         try:
             resp = self.http_open(req, timeout=timeout, context=f"GET {url}")
             charset = resp.headers.get_content_charset() or "iso-8859-15"
-            return resp.read().decode(charset, errors="replace")
+            html = resp.read().decode(charset, errors="replace")
+            if return_url:
+                return html, resp.geturl()
+            return html
 
         except urllib.error.HTTPError as e:
             # tentar obter corpo para diagnosticar
@@ -592,12 +612,18 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
     """
     url = SIGARRA_UC_URL.format(ocorrencia_id)
     if sessao:
-        html = sessao.fetch_html(url)
+        html, url_final = sessao.fetch_html(url, return_url=True)
     else:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         resp = urllib.request.urlopen(req, timeout=30)
+        url_final = resp.geturl()
         charset = resp.headers.get_content_charset() or "iso-8859-15"
         html = resp.read().decode(charset)
+
+    # Detetar faculdade a partir do URL final (redirect)
+    m_inst = re.search(r'sigarra\.up\.pt/(\w+)/pt/', url_final)
+    inst = m_inst.group(1).lower() if m_inst else SIGARRA_INST_DEFAULT
+    _OC_INST[str(ocorrencia_id)] = inst
 
     # Nome da UC (do <h1>)
     nome_uc = ""
@@ -662,6 +688,8 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
     # o mismatch de ano é detectado em extrair_moodle_uc via
     # _extrair_ano_instancia_moodle, que descarta o resultado se necessário.
     moodle_url = _extrair_moodle_url(html)
+    if moodle_url and inst != SIGARRA_INST_DEFAULT:
+        moodle_url = moodle_url.replace(f"/{SIGARRA_INST_DEFAULT}/", f"/{inst}/", 1)
     pagina_web_url = _extrair_pagina_web_url(html)
     conteudos_pct_pag_id = _extrair_conteudos_pag_id(html)
 
@@ -670,6 +698,7 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
         "sigla_uc": sigla_uc,
         "ano_letivo": ano_letivo,
         "ucurr_id": ucurr_id,
+        "inst": inst,
         "lingua_trabalho": lingua_trabalho,
         "programa": programa,
         "programa_html": programa_html or "",
@@ -747,7 +776,8 @@ def _extrair_moodle_url(html: str) -> str | None:
     # p_codigo=-1 significa que a integração não está ativa
     if "p_codigo=-1" in href:
         return None
-    return f"{SIGARRA_BASE}/{href}"
+    # Usar a faculdade correta (pode ser chamado no contexto de outra faculdade)
+    return f"{SIGARRA_BASE}/{href}"  # base default; ajustado por sigarra_url_oc se necessário
 
 
 def _extrair_conteudos_pag_id(html: str) -> str | None:
@@ -796,7 +826,7 @@ def extrair_conteudos_sigarra(
     devolve lista de dicts compatível com a estrutura de enunciados
     (nome, descricao, epoca, data, url, pdf_bytes, origem).
     """
-    base_url = SIGARRA_CONTEUDOS_URL.format(pct_pag_id, ocorrencia_id)
+    base_url = sigarra_url_oc(SIGARRA_CONTEUDOS_URL.format(pct_pag_id, ocorrencia_id), ocorrencia_id)
 
     # 1. Listar pastas — extrair IDs de grupo únicos
     html_lista = sessao.fetch_html(base_url)
@@ -866,7 +896,7 @@ def extrair_conteudos_sigarra(
             if verbosidade >= 2:
                 print(f"  Conteúdos SIGARRA: ignorar '{f['nome']}' ({f['tamanho_kb']} KB > limite)")
             continue
-        file_url = SIGARRA_CONTEUDOS_FILE_URL.format(f["pct_id"], f["pv_cod"])
+        file_url = sigarra_url_oc(SIGARRA_CONTEUDOS_FILE_URL.format(f["pct_id"], f["pv_cod"]), ocorrencia_id)
         try:
             req = urllib.request.Request(file_url, headers={"User-Agent": "Mozilla/5.0"})
             resp = sessao.http_open(req, timeout=60, context=f"download conteúdo {f['nome']}")
@@ -935,7 +965,7 @@ def extrair_turmas_docente_uc(
     """
     ano = ano_letivo.split("/")[0].strip()
     periods = "&".join(f"period={p}" for p in range(1, 9))
-    url = SIGARRA_CALENDARIOS_EVENTS_URL.format(ocorrencia_id) + f"?academic_year={ano}&{periods}"
+    url = sigarra_url_oc(SIGARRA_CALENDARIOS_EVENTS_URL.format(ocorrencia_id), ocorrencia_id) + f"?academic_year={ano}&{periods}"
     try:
         req = urllib.request.Request(
             url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
@@ -963,7 +993,7 @@ SIGARRA_UC_LIST_URL = f"{SIGARRA_BASE}/ucurr_geral.ficha_uc_list?pv_ucurr_id={{}
 
 def _ocorrencia_ativa(oc_id: str, sessao: SigarraSession | None) -> bool:
     """Verifica se uma ocorrência está ativa consultando a sua ficha."""
-    url = SIGARRA_UC_URL.format(oc_id)
+    url = sigarra_url_oc(SIGARRA_UC_URL.format(oc_id), oc_id)
     try:
         if sessao:
             html = sessao.fetch_html(url)
@@ -1002,7 +1032,7 @@ def extrair_ocorrencia_anterior(
     if not ucurr_id:
         return None
 
-    url = SIGARRA_UC_LIST_URL.format(ucurr_id)
+    url = sigarra_url_oc(SIGARRA_UC_LIST_URL.format(ucurr_id), ocorrencia_id)
     if sessao:
         html = sessao.fetch_html(url)
     else:
@@ -1110,7 +1140,7 @@ def extrair_sumarios(
     if not sessao.autenticado:
         raise PermissionError("É necessário autenticar antes de aceder aos sumários.")
 
-    url = SIGARRA_SUMARIOS_URL.format(ocorrencia_id)
+    url = sigarra_url_oc(SIGARRA_SUMARIOS_URL.format(ocorrencia_id), ocorrencia_id)
     try:
         html = sessao.fetch_html(url)
     except PermissionError as e:
@@ -1325,7 +1355,7 @@ def extrair_resultados_uc(ocorrencia_id: str, sessao: SigarraSession) -> dict:
             "É necessário autenticar antes de aceder ao relatório."
         )
 
-    url = SIGARRA_RELATORIO_UC_URL.format(ocorrencia_id)
+    url = sigarra_url_oc(SIGARRA_RELATORIO_UC_URL.format(ocorrencia_id), ocorrencia_id)
     html = sessao.fetch_html(url)
 
     identificacao = _extrair_identificacao_relatorio(html)
@@ -1357,7 +1387,7 @@ def extrair_pautas_uc(ocorrencia_id: str, sessao: SigarraSession) -> list[dict]:
         Lista de dicts com 'pauta_id', 'epoca', 'ano_letivo', 'estado',
         'data_estado', 'n_estudantes'.
     """
-    url = f"{SIGARRA_BASE}/lres_geral.show_pautas?pv_ocorr_id={ocorrencia_id}"
+    url = sigarra_url_oc(f"{SIGARRA_BASE}/lres_geral.show_pautas?pv_ocorr_id={ocorrencia_id}", ocorrencia_id)
     html = sessao.fetch_html(url)
     soup = BeautifulSoup(html, "html.parser")
     pautas = []
@@ -1390,14 +1420,15 @@ def extrair_pautas_uc(ocorrencia_id: str, sessao: SigarraSession) -> list[dict]:
     return pautas
 
 
-def verificar_estudantes_sem_classificacao(pauta_id: str, sessao: SigarraSession) -> int | None:
+def verificar_estudantes_sem_classificacao(pauta_id: str, sessao: SigarraSession,
+                                           ocorrencia_id: str = "") -> int | None:
     """Verifica se há estudantes sem classificação final numa pauta.
 
     Returns:
         Número de estudantes sem classificação, 0 se todos têm classificação,
         ou None se não foi possível determinar.
     """
-    url = f"{SIGARRA_BASE}/lres_geral.show_pauta?pv_pauta_id={pauta_id}&pv_modo=LST"
+    url = sigarra_url_oc(f"{SIGARRA_BASE}/lres_geral.show_pauta?pv_pauta_id={pauta_id}&pv_modo=LST", ocorrencia_id)
     html = sessao.fetch_html(url)
     soup = BeautifulSoup(html, "html.parser")
     h3 = soup.find("h3", string=lambda s: s and "sem classificação final" in s.lower())
@@ -1425,7 +1456,7 @@ def extrair_aulas_adm(ocorrencia_id: str, sessao: SigarraSession) -> list[dict]:
     Devolve lista de dicts com 'std_id', 'data' (YYYY-MM-DD) e 'numero'.
     Requer sessão autenticada como docente da UC.
     """
-    url = f"{SIGARRA_BASE}/sumarios_adm.inicio?pv_ocorrencia_id={ocorrencia_id}"
+    url = sigarra_url_oc(f"{SIGARRA_BASE}/sumarios_adm.inicio?pv_ocorrencia_id={ocorrencia_id}", ocorrencia_id)
     html = sessao.fetch_html(url)
     soup = BeautifulSoup(html, "html.parser")
     resultado = []
@@ -1453,6 +1484,7 @@ def submeter_sumario(
     data_aula: str,       # YYYY-MM-DD
     cod_docente: str,
     sessao: SigarraSession,
+    ocorrencia_id: str = "",
 ) -> None:
     """Submete um sumário para uma aula no SIGARRA.
 
@@ -1462,7 +1494,7 @@ def submeter_sumario(
     Levanta ValueError se o body não contiver o redirect esperado.
     """
     # 1. GET do formulário para extrair p_n_aula
-    form_url = f"{SIGARRA_BASE}/sumarios_adm.inserir?pv_std_id={std_id}"
+    form_url = sigarra_url_oc(f"{SIGARRA_BASE}/sumarios_adm.inserir?pv_std_id={std_id}", ocorrencia_id)
     form_html = sessao.fetch_html(form_url)
     soup = BeautifulSoup(form_html, "html.parser")
     opt = soup.select_one("select[name='p_n_aula'] option[selected]")
@@ -1509,7 +1541,7 @@ def submeter_sumario(
     body = "".join(parts).encode("iso-8859-15", errors="replace")
 
     req = urllib.request.Request(
-        f"{SIGARRA_BASE}/sumarios_adm.sub_inserir",
+        sigarra_url_oc(f"{SIGARRA_BASE}/sumarios_adm.sub_inserir", ocorrencia_id),
         data=body,
         headers={
             "Content-Type": f"multipart/form-data; boundary={boundary}",
@@ -1538,6 +1570,7 @@ def extrair_resultados_curso(
     curso_id: str,
     ano_letivo: str,
     sessao: SigarraSession,
+    ocorrencia_id: str = "",
 ) -> list[dict]:
     """Extrai a tabela resumo de resultados de todas as UCs de um curso/ano.
 
@@ -1566,7 +1599,7 @@ def extrair_resultados_curso(
         "PV_SHOW_TITLE": "S",
     })
     req = urllib.request.Request(
-        SIGARRA_AJAX_RESULT_RESUMO_URL,
+        sigarra_url_oc(SIGARRA_AJAX_RESULT_RESUMO_URL, ocorrencia_id),
         data=params.encode("utf-8"),
         headers={
             "User-Agent": "Mozilla/5.0",
@@ -1701,7 +1734,7 @@ def extrair_enunciados_avaliacao(
             "É necessário autenticar antes de aceder aos enunciados."
         )
 
-    url = SIGARRA_RELATORIO_UC_URL.format(ocorrencia_id)
+    url = sigarra_url_oc(SIGARRA_RELATORIO_UC_URL.format(ocorrencia_id), ocorrencia_id)
     html = sessao.fetch_html(url)
 
     # Localizar secção "Enunciados das Avaliações" + tabela
@@ -1736,7 +1769,7 @@ def extrair_enunciados_avaliacao(
         if href.startswith("http"):
             pdf_url = href
         else:
-            pdf_url = f"{SIGARRA_BASE}/{href}"
+            pdf_url = sigarra_url_oc(f"{SIGARRA_BASE}/{href}", ocorrencia_id)
 
         # Descarregar PDF
         _info(f"  A descarregar: {nome}...")
@@ -1846,7 +1879,7 @@ def extrair_inquerito_pedagogico(
             "É necessário autenticar antes de aceder aos inquéritos pedagógicos."
         )
 
-    url = SIGARRA_IPUP_URL.format(ocorrencia_id)
+    url = sigarra_url_oc(SIGARRA_IPUP_URL.format(ocorrencia_id), ocorrencia_id)
 
     try:
         html = sessao.fetch_html(url, timeout=90)
@@ -1976,7 +2009,7 @@ def extrair_comentarios_inquerito(
             "É necessário autenticar antes de aceder aos comentários."
         )
 
-    url = SIGARRA_IPUP_COMENTARIOS_URL.format(ocorrencia_id, ano_letivo)
+    url = sigarra_url_oc(SIGARRA_IPUP_COMENTARIOS_URL.format(ocorrencia_id, ano_letivo), ocorrencia_id)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         resp = sessao.http_open(req, timeout=90, context="download comentários inquérito")
@@ -2208,7 +2241,7 @@ def extrair_form_relatorio(
             "É necessário autenticar antes de aceder ao relatório."
         )
 
-    url = SIGARRA_REL_UC_EDIT_URL.format(ocorrencia_id)
+    url = sigarra_url_oc(SIGARRA_REL_UC_EDIT_URL.format(ocorrencia_id), ocorrencia_id)
     html = sessao.fetch_html(url)
 
     # Guardar HTML do formulário para diagnóstico apenas em debug (V>=2)
@@ -2378,10 +2411,10 @@ def submeter_relatorio(
                                                errors="xmlcharrefreplace")
 
 
-    referer_url = SIGARRA_REL_UC_EDIT_URL.format(ocorrencia_id)
-    
+    referer_url = sigarra_url_oc(SIGARRA_REL_UC_EDIT_URL.format(ocorrencia_id), ocorrencia_id)
+
     req = urllib.request.Request(
-        SIGARRA_REL_UC_SUB_URL,
+        sigarra_url_oc(SIGARRA_REL_UC_SUB_URL, ocorrencia_id),
         data=dados_codificados.encode("iso-8859-15"),
         headers={
             "User-Agent": "Mozilla/5.0",
@@ -2527,10 +2560,10 @@ def upload_enunciado_sigarra(
     body += pdf_bytes
     body += f"\r\n--{boundary}--\r\n".encode("utf-8")
 
-    referer_url = SIGARRA_REL_UC_EDIT_URL.format(ocorrencia_id) if ocorrencia_id else ""
+    referer_url = sigarra_url_oc(SIGARRA_REL_UC_EDIT_URL.format(ocorrencia_id), ocorrencia_id) if ocorrencia_id else ""
 
     req = urllib.request.Request(
-        SIGARRA_UPLOAD_SANDBOX_URL,
+        sigarra_url_oc(SIGARRA_UPLOAD_SANDBOX_URL, ocorrencia_id),
         data=body,
         headers={
             "User-Agent": "Mozilla/5.0",
@@ -2758,7 +2791,7 @@ def docente_eh_regente_na_ocorrencia(
     if not sessao.autenticado:
         raise PermissionError("É necessário autenticar antes de verificar responsabilidades.")
 
-    html = sessao.fetch_html(SIGARRA_UC_URL.format(ocorrencia_id))
+    html = sessao.fetch_html(sigarra_url_oc(SIGARRA_UC_URL.format(ocorrencia_id), ocorrencia_id))
     soup = BeautifulSoup(html, "html.parser")
 
     alvo = str(doc_codigo).strip()
@@ -2809,7 +2842,7 @@ def _info_docencia_ocorrencia(
     if not sessao.autenticado:
         raise PermissionError("É necessário autenticar antes de verificar responsabilidades.")
 
-    html = sessao.fetch_html(SIGARRA_UC_URL.format(ocorrencia_id))
+    html = sessao.fetch_html(sigarra_url_oc(SIGARRA_UC_URL.format(ocorrencia_id), ocorrencia_id))
     soup = BeautifulSoup(html, "html.parser")
     sigla_uc = _extrair_sigla_uc(html)
 
@@ -2886,7 +2919,8 @@ def extrair_ocorrencias_servico_docente(
     if not sessao.autenticado:
         raise PermissionError("É necessário autenticar antes de aceder ao serviço docente.")
 
-    params = {"pv_doc_codigo": str(doc_codigo).strip()}
+    # JPF09ABR26: incluir serviço noutras instituições
+    params = {"pv_outras_inst": "S", "pv_doc_codigo": str(doc_codigo).strip()}
     if ano_letivo is not None and str(ano_letivo).strip():
         params["pv_ano_lectivo"] = str(ano_letivo).strip()
 
@@ -2921,52 +2955,52 @@ def extrair_ocorrencias_servico_docente(
                 ano_letivo_resolvido = m_ano.group(1)
                 break
 
-    # Encontrar a tabela que contém o cabeçalho "Unidade Curricular"
-    tabela_alvo = None
+    # Encontrar a(s) tabela(s) que contém/Contêm o cabeçalho "Unidade Curricular"
+    tabelas_alvos = []
     for t in soup.find_all("table"):
         header_txt = " ".join(_norm(t.get_text(" ", strip=True)).split())
         if "Unidade Curricular" in header_txt or "Course Unit" in header_txt:
             # Heurística: a tabela tem de ter links com pv_ocorrencia_id
             if t.find("a", href=re.compile(r"pv_ocorrencia_id=\d+", re.I)):
-                tabela_alvo = t
-                break
+                tabelas_alvos.append(t)
 
-    if tabela_alvo is None:
-        raise ValueError("Tabela de distribuição de serviço não encontrada na página.")
+    if not tabelas_alvos:
+        raise ValueError("Tabela(s) de distribuição de serviço não encontrada(s) na página.")
 
-    for tr in tabela_alvo.find_all("tr"):
-        tds = tr.find_all("td")
-        if len(tds) < 4:
-            continue
+    for tabela_alvo in tabelas_alvos:
+        for tr in tabela_alvo.find_all("tr"):
+            tds = tr.find_all("td")
+            if len(tds) < 4:
+                continue
 
-        a = tr.find("a", href=re.compile(r"pv_ocorrencia_id=\d+", re.I))
-        if not a:
-            continue
+            a = tr.find("a", href=re.compile(r"pv_ocorrencia_id=\d+", re.I))
+            if not a:
+                continue
 
-        m = re.search(r"pv_ocorrencia_id=(\d+)", a.get("href", ""), re.I)
-        if not m:
-            continue
-        ocorrencia_id = m.group(1)
+            m = re.search(r"pv_ocorrencia_id=(\d+)", a.get("href", ""), re.I)
+            if not m:
+                continue
+            ocorrencia_id = m.group(1)
 
-        nome_uc = _norm(a.get_text(" ", strip=True))
-        curso = _norm(tds[1].get_text(" ", strip=True)) if len(tds) > 1 else ""
-        periodo = _norm(tds[2].get_text(" ", strip=True)) if len(tds) > 2 else ""
-        ano = _norm(tds[3].get_text(" ", strip=True)) if len(tds) > 3 else ""
+            nome_uc = _norm(a.get_text(" ", strip=True))
+            curso = _norm(tds[1].get_text(" ", strip=True)) if len(tds) > 1 else ""
+            periodo = _norm(tds[2].get_text(" ", strip=True)) if len(tds) > 2 else ""
+            ano = _norm(tds[3].get_text(" ", strip=True)) if len(tds) > 3 else ""
 
-        chave = (ocorrencia_id, curso, ano, periodo)
-        if chave in vistos:
-            continue
-        vistos.add(chave)
+            chave = (ocorrencia_id, curso, ano, periodo)
+            if chave in vistos:
+                continue
+            vistos.add(chave)
 
-        resultados.append({
-            "ocorrencia_id": ocorrencia_id,
-            "nome_uc": nome_uc,
-            "curso": curso,
-            "periodo": periodo,
-            "ano": ano,
-            "chave": chave,
-            "url_ficha_uc": SIGARRA_UC_URL.format(ocorrencia_id),
-        })
+            resultados.append({
+                "ocorrencia_id": ocorrencia_id,
+                "nome_uc": nome_uc,
+                "curso": curso,
+                "periodo": periodo,
+                "ano": ano,
+                "chave": chave,
+                "url_ficha_uc": SIGARRA_UC_URL.format(ocorrencia_id),
+            })
 
     if apenas_regente_docente:
         filtradas: list[dict] = []

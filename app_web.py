@@ -32,7 +32,7 @@ from urllib.parse import urlparse
 
 from flask import Flask, request, session as flask_session, redirect, url_for, Response, abort, send_file
 
-from sigarra import SigarraSession, load_env
+from sigarra import SigarraSession, load_env, sigarra_url_oc, SIGARRA_REL_UC_VIEW_URL
 from logger import AuditoriaLogger
 from auditoria_core import analisar_uc, submeter_preview_uc, _SCRIPT_DIR
 from sigarra import extrair_ocorrencias_servico_docente
@@ -3040,7 +3040,7 @@ def progress(job_id: str):
         </div>
         """
     elif job.done and job.ok and is_submit:
-        sigarra_url = f"https://sigarra.up.pt/feup/pt/ucurr_geral.rel_uc_view?pv_ocorrencia_id={_esc(job.oc_id)}"
+        sigarra_url = sigarra_url_oc(SIGARRA_REL_UC_VIEW_URL.format(_esc(job.oc_id)), job.oc_id)
         body += f"""
         <div class="card">
           <p><a href="{sigarra_url}" target="_blank" rel="noopener">Ver relatório no SIGARRA &#8599;</a></p>
