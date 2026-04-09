@@ -65,13 +65,46 @@ SIGARRA_CONTEUDOS_FILE_URL = f"{SIGARRA_BASE}/conteudos_service.conteudos_cont?p
 SIGARRA_CALENDARIOS_EVENTS_URL = f"https://sigarra.up.pt/calendarios-api/api/v1/events/{SIGARRA_INST_DEFAULT}/uc/{{}}/"
 
 # Cache: ocorrencia_id → código da faculdade (ex: "fcup", "fmup").
-# Preenchido por extrair_ficha_uc() na primeira vez que se acede à UC.
+# Preenchido automaticamente por _resolver_inst() na primeira vez que se usa sigarra_url_oc().
 _OC_INST: dict[str, str] = {}
 
 
+def _resolver_inst(ocorrencia_id: str) -> str:
+    """Determina a faculdade de uma ocorrência via redirect na ficha UC (pública).
+
+    Acede à ficha UC com a faculdade default e verifica o URL final após redirect.
+    O resultado é guardado em _OC_INST para chamadas subsequentes.
+    """
+    oc = str(ocorrencia_id)
+    url = SIGARRA_UC_URL.format(oc)
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        resp = urllib.request.urlopen(req, timeout=15)
+        url_final = resp.geturl()
+        resp.close()
+        m = re.search(r'sigarra\.up\.pt/(\w+)/pt/', url_final)
+        if m:
+            inst = m.group(1).lower()
+            _OC_INST[oc] = inst
+            return inst
+    except Exception:
+        pass
+    _OC_INST[oc] = SIGARRA_INST_DEFAULT
+    return SIGARRA_INST_DEFAULT
+
+
 def sigarra_url_oc(url: str, ocorrencia_id: str) -> str:
-    """Substitui a faculdade default na URL pela faculdade da ocorrência, se diferente."""
-    inst = _OC_INST.get(str(ocorrencia_id), SIGARRA_INST_DEFAULT)
+    """Substitui a faculdade default na URL pela faculdade da ocorrência, se diferente.
+
+    Se a faculdade não é conhecida, resolve-a automaticamente via redirect
+    na ficha UC (pública, sem autenticação).
+    """
+    oc = str(ocorrencia_id)
+    if not oc:
+        return url
+    inst = _OC_INST.get(oc)
+    if inst is None:
+        inst = _resolver_inst(oc)
     if inst != SIGARRA_INST_DEFAULT:
         url = url.replace(f"/{SIGARRA_INST_DEFAULT}/", f"/{inst}/", 1)
     return url
