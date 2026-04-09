@@ -57,7 +57,7 @@ SIGARRA_RELATORIO_UC_URL = f"{SIGARRA_BASE}/ucurr_geral.rel_uc_view?pv_ocorrenci
 SIGARRA_IPUP_URL = f"{SIGARRA_BASE}/ipup2016_est_geral.show_estatistica_uc?pv_ocorrencia_id={{}}"
 SIGARRA_IPUP_COMENTARIOS_URL = f"{SIGARRA_BASE}/ipup2016_geral.stats_comentarios_uc_xls?pi_ocorr_id={{}}&pi_instancia_id=&pi_ano_letivo={{}}"
 SIGARRA_REL_UC_EDIT_URL = f"{SIGARRA_BASE}/ucurr_adm.rel_uc_edit?pv_ocorrencia_id={{}}"
-SIGARRA_REL_UC_VIEW_URL = f"{SIGARRA_BASE}/ucurr_adm.rel_uc_view?pv_ocorrencia_id={{}}"
+SIGARRA_REL_UC_VIEW_URL = f"{SIGARRA_BASE}/ucurr_geral.rel_uc_view?pv_ocorrencia_id={{}}"
 SIGARRA_REL_UC_SUB_URL = f"{SIGARRA_BASE}/ucurr_adm.rel_uc_sub"
 SIGARRA_UPLOAD_SANDBOX_URL = f"{SIGARRA_BASE}/gdoc_geral.upload_to_sandbox"
 SIGARRA_CONTEUDOS_URL = f"{SIGARRA_BASE}/conteudos_geral.ver?pct_pag_id={{}}&pct_parametros=pv_ocorrencia_id={{}}"

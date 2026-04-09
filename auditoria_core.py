@@ -302,7 +302,8 @@ def submeter_preview_uc(
             aula_label = f"aula {s.get('numero', '?')} ({s.get('turma', '?')})"
             try:
                 submeter_sumario(std_id, texto, s.get("data_iso", ""),
-                                 sessao.codigo_pessoal or "", sessao)
+                                 sessao.codigo_pessoal or "", sessao,
+                                 ocorrencia_id=oc_id)
                 n_ok += 1
             except Exception as e:
                 n_falha += 1
