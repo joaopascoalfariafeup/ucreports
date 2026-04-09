@@ -15,7 +15,7 @@ from pathlib import Path
 from pypdf import PdfReader
 
 from sigarra import (
-    SigarraSession, SIGARRA_BASE, sigarra_url_oc, extrair_ficha_uc, extrair_sumarios,
+    SigarraSession, SIGARRA_BASE, SIGARRA_HOME_BASE, sigarra_url_oc, extrair_ficha_uc, extrair_sumarios,
     extrair_resultados_uc, extrair_resultados_curso,
     extrair_pautas_uc, verificar_estudantes_sem_classificacao,
     extrair_enunciados_avaliacao,
@@ -370,7 +370,7 @@ def analisar_uc(
     if sessao.codigo_pessoal:
         try:
             _check_html = sessao.fetch_html(
-                f"{SIGARRA_BASE}/vig_geral.docentes_vigilancias_list"
+                f"{SIGARRA_HOME_BASE}/vig_geral.docentes_vigilancias_list"
                 f"?p_func_codigo={sessao.codigo_pessoal}"
             )
             if "Não tem permissões" in _check_html:

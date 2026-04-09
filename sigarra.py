@@ -46,8 +46,10 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 # URLs do SIGARRA — constantes usam "feup" como default; para UCs de outras
 # faculdades, sigarra_url_oc() substitui pelo código correto.
 SIGARRA_INST_DEFAULT = "fcup"  # temporário para testes multi-faculdade
+SIGARRA_INST_HOME = "feup"    # faculdade home do utilizador (auth, serviço docente)
 SIGARRA_BASE = f"https://sigarra.up.pt/{SIGARRA_INST_DEFAULT}/pt"
-SIGARRA_AUTH_URL = f"{SIGARRA_BASE}/mob_val_geral.autentica"
+SIGARRA_HOME_BASE = f"https://sigarra.up.pt/{SIGARRA_INST_HOME}/pt"
+SIGARRA_AUTH_URL = f"{SIGARRA_HOME_BASE}/mob_val_geral.autentica"
 SIGARRA_UC_URL = f"{SIGARRA_BASE}/UCURR_GERAL.FICHA_UC_VIEW?pv_ocorrencia_id={{}}"
 SIGARRA_SUMARIOS_URL = f"{SIGARRA_BASE}/sumarios_geral.ver?pv_ocorrencia_id={{}}"
 SIGARRA_SUMARIOS_LISTA_URL = f"{SIGARRA_BASE}/sumarios_geral.lista"
@@ -392,7 +394,7 @@ class SigarraSession:
         Returns:
             tuple (html_e1s2, url_e1s2) — HTML do formulário de login e URL base.
         """
-        _FED_START = f"{SIGARRA_BASE}/vld_validacao.federate_login?p_redirect=web_page.Inicial"
+        _FED_START = f"{SIGARRA_HOME_BASE}/vld_validacao.federate_login?p_redirect=web_page.Inicial"
 
         try:
             html_e1s1, url_e1s1 = self._saml_request(_FED_START)
@@ -468,7 +470,7 @@ class SigarraSession:
             # Fallback: ler da página home do SIGARRA após autenticação.
             # A foto do perfil tem o padrão: fotografias_service.foto_thumb?pct_cod=XXXXXX
             try:
-                html_home, _ = self._saml_request(f"{SIGARRA_BASE}/web_page.inicial", referer=url_final)
+                html_home, _ = self._saml_request(f"{SIGARRA_HOME_BASE}/web_page.inicial", referer=url_final)
                 mc = re.search(r'foto_thumb\?pct_cod=(\d+)', html_home)
                 self._codigo_pessoal = mc.group(1) if mc else None
             except Exception:
@@ -2710,8 +2712,8 @@ def submeter_enunciados_sigarra(
 # (dedup por (ocorrencia_id, curso, ano, periodo))
 # ---------------------------------------------------------------------------
 
-SIGARRA_SERVICO_DOCENTE_QUERYLIST_URL = f"{SIGARRA_BASE}/ds_func_relatorios.querylist"
-SIGARRA_SERVICO_DOCENTE_LISTA_ANOS_URL = f"{SIGARRA_BASE}/ds_func_relatorios.lista_anos"
+SIGARRA_SERVICO_DOCENTE_QUERYLIST_URL = f"{SIGARRA_HOME_BASE}/ds_func_relatorios.querylist"
+SIGARRA_SERVICO_DOCENTE_LISTA_ANOS_URL = f"{SIGARRA_HOME_BASE}/ds_func_relatorios.lista_anos"
 
 
 def extrair_anos_servico_docente(
