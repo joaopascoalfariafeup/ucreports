@@ -1248,7 +1248,7 @@ def extrair_sumarios(
             "pv_tipo_aula": turma["tipo_aula"],
             "pv_turma_id": turma["turma_id"],
         })
-        lista_url = f"{SIGARRA_SUMARIOS_LISTA_URL}?{params}"
+        lista_url = sigarra_url_oc(f"{SIGARRA_SUMARIOS_LISTA_URL}?{params}", ocorrencia_id)
         try:
             html_lista = sessao.fetch_html(lista_url)
         except PermissionError:
