@@ -45,7 +45,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 
 # URLs do SIGARRA — constantes usam "feup" como default; para UCs de outras
 # faculdades, sigarra_url_oc() substitui pelo código correto.
-SIGARRA_INST_DEFAULT = "feup"
+SIGARRA_INST_DEFAULT = "fcup"  # temporário para testes multi-faculdade
 SIGARRA_BASE = f"https://sigarra.up.pt/{SIGARRA_INST_DEFAULT}/pt"
 SIGARRA_AUTH_URL = f"{SIGARRA_BASE}/mob_val_geral.autentica"
 SIGARRA_UC_URL = f"{SIGARRA_BASE}/UCURR_GERAL.FICHA_UC_VIEW?pv_ocorrencia_id={{}}"
