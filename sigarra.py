@@ -81,7 +81,17 @@ def _resolver_inst(ocorrencia_id: str) -> str:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         resp = urllib.request.urlopen(req, timeout=15)
         url_final = resp.geturl()
+        # SIGARRA pode devolver 200 com redirect HTML em vez de 301/302
+        charset = resp.headers.get_content_charset() or "iso-8859-15"
+        body = resp.read().decode(charset, errors="replace")
         resp.close()
+        html_redirect = _extrair_redirect_html(body)
+        if html_redirect:
+            m_redir = re.search(r'sigarra\.up\.pt/(\w+)/', html_redirect)
+            if m_redir:
+                inst = m_redir.group(1).lower()
+                _OC_INST[oc] = inst
+                return inst
         m = re.search(r'sigarra\.up\.pt/(\w+)/pt/', url_final)
         if m:
             inst = m.group(1).lower()
@@ -91,6 +101,28 @@ def _resolver_inst(ocorrencia_id: str) -> str:
         pass
     _OC_INST[oc] = SIGARRA_INST_DEFAULT
     return SIGARRA_INST_DEFAULT
+
+
+def _extrair_redirect_html(html: str) -> str | None:
+    """Extrai URL de redirect de uma página HTML curta (meta refresh ou JS).
+
+    O SIGARRA usa redirect HTML (não HTTP 301/302) ao mudar de faculdade.
+    """
+    if len(html) > 2000:
+        return None  # Página real, não um redirect
+    # <meta http-equiv="refresh" content="0;url=...">
+    m = re.search(r'<meta[^>]+http-equiv=["\']?refresh["\']?[^>]+content=["\']?\d+;\s*url=([^"\'>\s]+)', html, re.I)
+    if m:
+        return m.group(1)
+    # JavaScript: window.location = "..." ou window.location.href = "..."
+    m = re.search(r'window\.location(?:\.href)?\s*=\s*["\']([^"\']+)["\']', html, re.I)
+    if m:
+        return m.group(1)
+    # JavaScript: location.replace("...")
+    m = re.search(r'location\.replace\s*\(\s*["\']([^"\']+)["\']', html, re.I)
+    if m:
+        return m.group(1)
+    return None
 
 
 def sigarra_url_oc(url: str, ocorrencia_id: str) -> str:
@@ -645,7 +677,7 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
     Raises:
         ValueError: Se a secção 'Programa' não for encontrada.
     """
-    url = SIGARRA_UC_URL.format(ocorrencia_id)
+    url = sigarra_url_oc(SIGARRA_UC_URL.format(ocorrencia_id), ocorrencia_id)
     if sessao:
         html, url_final = sessao.fetch_html(url, return_url=True)
     else:
@@ -655,7 +687,21 @@ def extrair_ficha_uc(ocorrencia_id: str, sessao: SigarraSession | None = None) -
         charset = resp.headers.get_content_charset() or "iso-8859-15"
         html = resp.read().decode(charset)
 
-    # Detetar faculdade a partir do URL final (redirect)
+    # SIGARRA pode devolver 200 + redirect HTML em vez de 301/302
+    html_redirect = _extrair_redirect_html(html)
+    if html_redirect:
+        # Resolver URL relativo/absoluto
+        redirect_url = urllib.parse.urljoin(url_final, html_redirect)
+        if sessao:
+            html, url_final = sessao.fetch_html(redirect_url, return_url=True)
+        else:
+            req = urllib.request.Request(redirect_url, headers={"User-Agent": "Mozilla/5.0"})
+            resp = urllib.request.urlopen(req, timeout=30)
+            url_final = resp.geturl()
+            charset = resp.headers.get_content_charset() or "iso-8859-15"
+            html = resp.read().decode(charset)
+
+    # Detetar faculdade a partir do URL final
     m_inst = re.search(r'sigarra\.up\.pt/(\w+)/pt/', url_final)
     inst = m_inst.group(1).lower() if m_inst else SIGARRA_INST_DEFAULT
     _OC_INST[str(ocorrencia_id)] = inst
