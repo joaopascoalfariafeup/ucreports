@@ -779,7 +779,7 @@ def analisar_uc(
 
     enunciados_para_upload = []
     provider_llm = (llm_provider or os.environ.get("LLM_PROVIDER", "anthropic")).strip().lower()
-    modelo_llm = (llm_modelo or os.environ.get("LLM_MODELO_ANALISE", "").strip() or "claude-opus-4-6")
+    modelo_llm = (llm_modelo or os.environ.get("LLM_MODELO_ANALISE", "").strip() or "claude-opus-4-7")
     log.iniciar_fase("llm", f"Analisar UC com {provider_llm}/{modelo_llm}...")
 
     resultado_int = analisar_uc_integrado(

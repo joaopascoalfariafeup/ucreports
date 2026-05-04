@@ -40,7 +40,7 @@ def _carregar_prompt(nome_ficheiro: str) -> str:
 SYSTEM_PROMPT_INTEGRADO = _carregar_prompt("system_prompt.txt")
 
 # Modelos — configuráveis via .env, com defaults no código
-_MODELO_ANALISE_DEFAULT = "claude-opus-4-6"
+_MODELO_ANALISE_DEFAULT = "claude-opus-4-7"
 _MODELO_CONDENSACAO_DEFAULT = "claude-sonnet-4-5-20250929"
 
 
@@ -1432,7 +1432,7 @@ def _estimar_custo(modelo: str, input_tokens: int, output_tokens: int) -> float 
     print(f"Estimando custo para modelo '{modelo}' com {input_tokens} input + {output_tokens} output tokens...")
     precos = _PRECOS.get(modelo)
     if precos is None:
-        # Correspondência por prefixo (ex: "claude-opus-4-6-20250101" → "claude-opus-4-6").
+        # Correspondência por prefixo (ex: "claude-opus-4-7-20250101" → "claude-opus-4-7").
         # Itera pelo prefixo mais longo primeiro para evitar que "gpt-4o" capture "gpt-4o-mini".
         for chave, custos in _PRECOS.items():  # já está por comprimento desc
             if modelo.startswith(chave):
