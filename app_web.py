@@ -970,6 +970,31 @@ def _is_job_owner(job: Tarefa, sess: SigarraSession) -> bool:
     return bool(owner and current and owner == current)
 
 
+def _admin_codes() -> set[str]:
+    """Códigos SIGARRA de administradores, a partir de ADMIN_CODES (csv)."""
+    load_env()
+    raw = os.environ.get("ADMIN_CODES", "").strip()
+    return {c.strip() for c in raw.split(",") if c.strip()} if raw else set()
+
+
+def _is_admin(sess: SigarraSession) -> bool:
+    """True se o utilizador autenticado (código real, nunca o impersonado) é admin."""
+    return bool(sess.codigo_pessoal and sess.codigo_pessoal in _admin_codes())
+
+
+def _get_impersonated_code() -> Optional[str]:
+    return flask_session.get("impersonated_code") or None
+
+
+def _effective_codigo(sess: SigarraSession) -> str:
+    """Código a usar nas consultas SIGARRA: o impersonado (só se admin) ou o real."""
+    if _is_admin(sess):
+        imp = _get_impersonated_code()
+        if imp:
+            return imp
+    return (sess.codigo_pessoal or "").strip()
+
+
 @app.before_request
 def _before_request():
     flask_session.permanent = True
@@ -2036,7 +2061,26 @@ def login_oidc_callback():
 def logout():
     _clear_sigarra_session()
     flask_session.pop("sigarra_login", None)
+    flask_session.pop("impersonated_code", None)
     return redirect(url_for("login"))
+
+
+@app.post("/impersonate")
+def impersonate():
+    """Admin assume (ou abandona) o papel de outro utilizador SIGARRA."""
+    _require_csrf()
+    sess = _get_sigarra_session()
+    if not sess:
+        return redirect(url_for("login"))
+    if not _is_admin(sess):
+        abort(403)
+    code = request.form.get("impersonate_code", "").strip()
+    if code and re.fullmatch(r"\d{1,12}", code):
+        flask_session["impersonated_code"] = code
+    else:
+        flask_session.pop("impersonated_code", None)
+    # invalida cache de serviço docente para refletir o novo papel de imediato
+    return redirect(url_for("ucs", refresh="1"))
 
 
 @app.get("/ucs")
@@ -2050,8 +2094,10 @@ def ucs():
         </div>
         """)
 
-    # usa sempre o utilizador autenticado no SIGARRA
-    doc_codigo = (sess.codigo_pessoal or "").strip()
+    # Por omissão usa o utilizador autenticado; admin pode assumir o papel de outro.
+    is_admin = _is_admin(sess)
+    impersonated = _get_impersonated_code() if is_admin else None
+    doc_codigo = _effective_codigo(sess)
     ano_letivo = request.args.get("ano_letivo", "").strip()  # ex: 2025
     force_refresh = request.args.get("refresh", "").strip() == "1"
 
@@ -2151,8 +2197,36 @@ def ucs():
     elif docente_nome:
         docente_label = docente_nome
 
+    # --- Bloco de administração (impersonação) ---
+    admin_block = ""
+    if impersonated:
+        nome_imp = f"{docente_nome} ({doc_codigo})" if docente_nome else doc_codigo
+        admin_block += f"""
+        <div class="status-err" style="margin:0 0 12px;padding:8px 12px;border-radius:6px;font-size:0.9em;">
+          <strong>A assumir o papel de:</strong> {_esc(nome_imp)}
+          <form method="post" action="{url_for('impersonate')}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{_esc(_get_csrf_token())}">
+            <input type="hidden" name="impersonate_code" value="">
+            <button type="submit" class="btn-edit" style="margin-left:8px;">Sair do modo</button>
+          </form>
+        </div>"""
+    if is_admin:
+        admin_block += f"""
+        <details style="margin:0 0 12px;font-size:0.9em;">
+          <summary style="cursor:pointer;color:var(--muted);">&#9881; Admin — assumir papel de utilizador</summary>
+          <form method="post" action="{url_for('impersonate')}" style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="hidden" name="csrf_token" value="{_esc(_get_csrf_token())}">
+            <label for="impersonate_code">Código SIGARRA:</label>
+            <input type="text" name="impersonate_code" id="impersonate_code"
+                   placeholder="ex: 210006" value="{_esc(impersonated or '')}"
+                   style="width:120px;" pattern="\\d{{1,12}}" title="Código numérico SIGARRA">
+            <button type="submit" class="btn-edit">Assumir papel</button>
+          </form>
+        </details>"""
+
     body = f"""
     <div class="card">
+      {admin_block}
       <div class="muted" style="margin-bottom:14px;">Regente: {_esc(docente_label)}</div>
       <form id="ucs-filter-form" method="get" action="{url_for('ucs')}">
         <div class="form-row-inline">
