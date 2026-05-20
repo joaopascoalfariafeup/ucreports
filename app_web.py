@@ -1905,10 +1905,12 @@ def privacidade():
       <ul>
         <li>ficha da UC (objetivos, resultados de aprendizagem, programa, métodos de avaliação);</li>
         <li>sumários da UC;</li>
-        <li>enunciados de elementos de avaliação (PDF/HTML) recolhidos do SIGARRA e do Moodle;</li>
+        <li>enunciados de elementos de avaliação (PDF/HTML) recolhidos do SIGARRA, do Moodle ou de
+            <i>site</i> externo indicado na ficha SIGARRA da UC;</li>
         <li>lista de atividades e descrições (<i>intro</i>) de <i>assignments</i> no Moodle;</li>
         <li>estatísticas agregadas de resultados de avaliação da UC, da ocorrência anterior e de outras UCs do mesmo ano do curso;</li>
-        <li>resultados agregados dos inquéritos pedagógicos (médias e medianas por pergunta, sem identificação) da UC e da ocorrência anterior.</li>
+        <li>resultados agregados dos inquéritos pedagógicos (médias e medianas por pergunta, sem identificação)
+            da UC e da ocorrência anterior, bem como comentários anexos aos mesmos (apenas da ocorrência em análise).</li>
       </ul>
       <p>
         Como medida adicional de minimização, a aplicação executa um <b>filtro automático de proteção de dados</b>
