@@ -1940,15 +1940,19 @@ def privacidade():
         ou conservados sob qualquer forma.
         </li>
         <li>
-        <b>Via Anthropic API (fornecedor por defeito):</b> o processamento é efetuado através da API comercial da Anthropic,
-        nos termos comerciais e de proteção de dados publicamente disponíveis. De acordo com a
+        <b>Via Anthropic API (fornecedor por defeito):</b> o processamento é efetuado através da API comercial da Anthropic.
+        A utilização da API implica aceitação dos Termos Comerciais da Anthropic, nos quais é
+        <a href="https://privacy.claude.com/en/articles/7996862-how-do-i-view-and-sign-your-data-processing-addendum-dpa" target="_blank" rel="noopener noreferrer">automaticamente incorporado</a>
+        o respetivo <i>Data Processing Addendum</i> (DPA), incluindo <i>Standard Contractual Clauses</i> (SCCs) para transferências
+        internacionais de dados. De acordo com a
         <a href="https://privacy.claude.com/en/collections/10672411-data-handling-retention" target="_blank" rel="noopener noreferrer">informação publicada</a>,
-        os dados enviados não são utilizados para treino de modelos, podendo ser objeto de retenção temporária
-        (limitada por defeito a 30 dias) para fins de monitorização de segurança e prevenção de abuso. Encontra-se
-        disponível, junto da Anthropic, a possibilidade de formalização adicional de <i>Data Processing Addendum</i>
-        (DPA), caso venha a ser considerada necessária pela Unidade de Proteção de Dados da U.Porto.
-        Os custos de utilização são suportados institucionalmente pela FEUP, podendo ser definidos limites
-        de utilização por utilizador no âmbito de políticas de utilização responsável.
+        os dados enviados não são utilizados para treino de modelos, podendo ser objeto de retenção temporária (limitada por defeito a 30 dias)
+        para fins de monitorização de segurança e prevenção de uso indevido. Está adicionalmente disponível, sujeita a aprovação
+        pela Anthropic, a celebração de um acordo de
+        <a href="https://privacy.claude.com/en/articles/8956058-i-have-a-zero-data-retention-agreement-with-anthropic-what-products-does-it-apply-to" target="_blank" rel="noopener noreferrer"><i>Zero Data Retention</i></a>
+        (ZDR), sob o qual a Anthropic não armazena os dados de entrada nem de saída (excepto o estritamente necessário para
+        cumprimento legal e prevenção de uso indevido). Os custos de utilização são suportados institucionalmente pela FEUP,
+        podendo ser definidos limites de utilização por utilizador no âmbito de políticas de utilização responsável.
         </li>
       </ul>
 
