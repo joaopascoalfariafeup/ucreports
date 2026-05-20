@@ -1985,13 +1985,10 @@ def privacidade():
 
       <h4>Infraestrutura e <i>backups</i></h4>
       <p>
-        A máquina virtual em que a aplicação corre é disponibilizada pela UPdigital no nível de serviço
-        &laquo;não gerido&raquo;, o que significa que <b>não dispõe de serviço de <i>backup</i></b>.
-        A infraestrutura subjacente garante apenas redundância de <i>hardware</i>, que mitiga falhas físicas
-        mas não constitui um <i>backup</i> nem permite recuperar ficheiros apagados (cf. Regulamento do Serviço
-        de Máquinas Virtuais da UPdigital). Não existem <i>snapshots</i> aplicacionais geridos pelo responsável
-        técnico. O mesmo regime aplicar-se-á à futura máquina virtual <code>ucreview.fe.up.pt</code>.
-        O acesso administrativo (SSH) à máquina virtual está restringido ao responsável técnico da aplicação.
+        A aplicação corre numa máquina virtual disponibilizada pela UPdigital, <b>sem serviço de
+        <i>backup</i> associado</b> — os dados de execução são definitivamente removidos do disco
+        após o prazo de retenção indicado acima. O acesso administrativo (SSH) à máquina virtual
+        está restringido ao responsável técnico da aplicação.
       </p>
 
       <p class="muted">
