@@ -1873,9 +1873,8 @@ def privacidade():
         curriculares (UCs) para as quais o utilizador autenticado possui permissões institucionais de regência.
       </p>
       <p>
-        O desenvolvimento e a manutenção técnica são da responsabilidade do docente responsável pelo
-        pelouro da Melhoria Contínua. A infraestrutura aplicacional corre numa máquina virtual
-        disponibilizada pela UPdigital.
+        O desenvolvimento e a manutenção técnica são da responsabilidade do pelouro da Melhoria
+        Contínua. A infraestrutura aplicacional corre numa máquina virtual disponibilizada pela UPdigital.
       </p>
 
       <h4>Autenticação e comunicação segura</h4>
