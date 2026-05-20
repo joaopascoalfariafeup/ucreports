@@ -165,6 +165,7 @@ WEB_OUTPUT_RETENTION_HOURS = float(os.environ.get("WEB_OUTPUT_RETENTION_HOURS",
     str(int(os.environ.get("WEB_OUTPUT_RETENTION_DAYS", "2")) * 24)  # compat
 ))
 WEB_OUTPUT_MAX_GB = float(os.environ.get("WEB_OUTPUT_MAX_GB", "5"))
+WEB_USAGE_LOG_RETENTION_DAYS = int(os.environ.get("WEB_USAGE_LOG_RETENTION_DAYS", "365"))
 _REVIEW_ERROR_INJECTION = int(os.environ.get("REVIEW_ERROR_INJECTION", "0").strip() or "0")
 # Se 1 (default), lista de UCs restringe-se a UCs em que o docente é regente.
 # Se 0, todos os docentes da UC podem gerar relatório (útil para testes).
@@ -251,6 +252,10 @@ def _periodic_cleanup() -> None:
         if now - last_prune >= prune_interval:
             try:
                 _prune_output_dir()
+            except Exception:
+                pass
+            try:
+                _prune_usage_log()
             except Exception:
                 pass
             last_prune = now
@@ -791,6 +796,45 @@ def _prune_output_dir() -> None:
                 total = max(0, total - size_old)
     finally:
         _PRUNE_LOCK.release()
+
+
+def _prune_usage_log() -> None:
+    """Remove entradas de _web_usage_log.jsonl com mais de WEB_USAGE_LOG_RETENTION_DAYS dias.
+
+    Atomicidade garantida por rewrite via .tmp + replace, sob _COSTS_LOCK (partilhado com escritas).
+    """
+    if WEB_USAGE_LOG_RETENTION_DAYS <= 0:
+        return
+    if not _USAGE_LOG_FILE.exists():
+        return
+    cutoff_iso = (
+        datetime.utcnow() - timedelta(days=WEB_USAGE_LOG_RETENTION_DAYS)
+    ).isoformat(timespec="seconds") + "Z"
+    with _COSTS_LOCK:
+        try:
+            mantidas: list[str] = []
+            removidas = 0
+            with _USAGE_LOG_FILE.open("r", encoding="utf-8") as f:
+                for linha in f:
+                    if not linha.strip():
+                        continue
+                    try:
+                        ev = json.loads(linha)
+                        ts = str(ev.get("timestamp_utc", ""))
+                        # comparação lexicográfica funciona para ISO 8601 de largura fixa
+                        if ts and ts < cutoff_iso:
+                            removidas += 1
+                            continue
+                    except Exception:
+                        pass  # linha mal formada — preservar para não perder dados silenciosamente
+                    mantidas.append(linha if linha.endswith("\n") else linha + "\n")
+            if removidas == 0:
+                return
+            tmp = _USAGE_LOG_FILE.with_suffix(".tmp")
+            tmp.write_text("".join(mantidas), encoding="utf-8")
+            tmp.replace(_USAGE_LOG_FILE)
+        except Exception:
+            pass
 
 
 def _month_key_utc() -> str:
@@ -1828,6 +1872,11 @@ def privacidade():
         Melhoria Contínua. A aplicação apenas permite a análise e geração de relatórios relativos a unidades
         curriculares (UCs) para as quais o utilizador autenticado possui permissões institucionais de regência.
       </p>
+      <p>
+        O desenvolvimento e a manutenção técnica são da responsabilidade do docente responsável pelo
+        pelouro da Melhoria Contínua. A infraestrutura aplicacional corre numa máquina virtual gerida pela
+        UPdigital, que assegura a operação da VM e da rede mas não acede à aplicação nem aos dados nela processados.
+      </p>
 
       <h4>Autenticação e comunicação segura</h4>
       <p>
@@ -1849,58 +1898,89 @@ def privacidade():
         de dados individuais de estudantes), incluindo, quando disponível:
       </p>
       <ul>
+        <li>ficha da UC (objetivos, resultados de aprendizagem, programa, métodos de avaliação);</li>
         <li>sumários da UC;</li>
-        <li>conteúdos e enunciados no Moodle;</li>
-        <li>enunciados no SIGARRA (no relatório da UC);</li>
+        <li>enunciados de elementos de avaliação (PDF/HTML) recolhidos do SIGARRA e do Moodle;</li>
+        <li>lista de atividades e descrições (<i>intro</i>) de <i>assignments</i> no Moodle;</li>
         <li>estatísticas agregadas de resultados de avaliação da UC, da ocorrência anterior e de outras UCs do mesmo ano do curso;</li>
-        <li>resultados agregados dos inquéritos pedagógicos da UC e da ocorrência anterior.</li>
+        <li>resultados agregados dos inquéritos pedagógicos (médias e medianas por pergunta, sem identificação) da UC e da ocorrência anterior.</li>
       </ul>
+      <p>
+        Como medida adicional de minimização, a aplicação executa um <b>filtro automático de proteção de dados</b>
+        sobre os enunciados extraídos, excluindo da análise pelo LLM ficheiros que apresentem indícios de
+        conter dados pessoais de estudantes (nomes, números de aluno, classificações). Os ficheiros excluídos
+        são reportados ao utilizador na página de revisão. Dos <i>quizzes</i> do Moodle é extraído apenas o
+        enunciado (perguntas) através do <i>preview</i> do docente, nunca respostas ou submissões de estudantes.
+      </p>
 
       <h4>Utilização de modelos de linguagem (LLM)</h4>
       <p>
         A aplicação utiliza modelos de linguagem de grande escala (LLM) que, com base nos dados recolhidos,
         apoiam a geração do relatório da UC. O relatório gerado é apresentado ao utilizador para revisão,
         sendo a sua submissão ao SIGARRA efetuada apenas após confirmação explícita do utilizador.
-        As garantias de privacidade e proteção de dados aplicáveis dependem do fornecedor selecionado:
+        Por defeito é utilizado o modelo <code>claude-opus-4-7</code> da Anthropic; o utilizador pode
+        alternativamente selecionar <code>gpt-4o</code> via IAedu. As garantias de privacidade e proteção
+        de dados aplicáveis dependem do fornecedor selecionado:
       </p>
       <ul>
         <li>
-        <b>Via IAedu:</b> o processamento é efetuado através da infraestrutura Microsoft Azure AI Foundry disponibilizada
-        pelo serviço IAedu da FCT/FCCN (sem custos diretos para a unidade orgânica utilizadora), limitado aos modelos aí
-        disponibilizados. De acordo com a respetiva <a href="https://iaedu.pt/pt/politica-de-privacidade-e-protecao-de-dados" target="_blank" rel="noopener noreferrer">política de privacidade</a>, 
-        os dados não são armazenados, registados, transmitidos a terceiros, utilizados para treino de modelos ou conservados sob qualquer forma.
+        <b>Via IAedu (modelo selecionável):</b> o processamento é efetuado através da infraestrutura Microsoft Azure AI
+        Foundry disponibilizada pelo serviço IAedu da FCT/FCCN (sem custos diretos para a unidade orgânica utilizadora),
+        limitado aos modelos aí disponibilizados. De acordo com a respetiva
+        <a href="https://iaedu.pt/pt/politica-de-privacidade-e-protecao-de-dados" target="_blank" rel="noopener noreferrer">política de privacidade</a>,
+        os dados não são armazenados, registados, transmitidos a terceiros, utilizados para treino de modelos
+        ou conservados sob qualquer forma.
         </li>
-<li>
-  <b>Via Anthropic API:</b> o processamento é efetuado através da API comercial da Anthropic.
-  De acordo com a <a href="https://privacy.claude.com/en/collections/10672411-data-handling-retention">informação pública atualmente disponibilizada</a>, os dados enviados não são utilizados para treino de modelos,  podendo ser objeto de retenção temporária 
-  (limitada por defeito a 30 dias) para fins de monitorização de segurança e prevenção de abuso.
-          Quando aplicável, os custos de utilização são suportados institucionalmente pela FEUP,
-        podendo ser definidos limites de utilização por utilizador no âmbito de políticas de utilização responsável.
-
-</li>
-<li>
-  <b>Via OpenAI API:</b> o processamento é efetuado através da API comercial da OpenAI.
-  De acordo com a <a href="https://developers.openai.com/api/docs/guides/your-data">informação pública atualmente disponibilizada</a>, os dados enviados não são utilizados para treino de modelos, podendo ser objeto de retenção temporária
-  (limitada por defeito a 30 dias) para fins de monitorização de segurança e prevenção de abuso.
-        Quando aplicável, os custos de utilização são suportados institucionalmente pela FEUP,
-        podendo ser definidos limites de utilização por utilizador no âmbito de políticas de utilização responsável.
-</li>
+        <li>
+        <b>Via Anthropic API (fornecedor por defeito):</b> o processamento é efetuado através da API comercial da Anthropic,
+        nos termos comerciais e de proteção de dados publicamente disponíveis. De acordo com a
+        <a href="https://privacy.claude.com/en/collections/10672411-data-handling-retention" target="_blank" rel="noopener noreferrer">informação publicada</a>,
+        os dados enviados não são utilizados para treino de modelos, podendo ser objeto de retenção temporária
+        (limitada por defeito a 30 dias) para fins de monitorização de segurança e prevenção de abuso. Encontra-se
+        disponível, junto da Anthropic, a possibilidade de formalização adicional de <i>Data Processing Addendum</i>
+        (DPA), caso venha a ser considerada necessária pela Unidade de Proteção de Dados da U.Porto.
+        Os custos de utilização são suportados institucionalmente pela FEUP, podendo ser definidos limites
+        de utilização por utilizador no âmbito de políticas de utilização responsável.
+        </li>
       </ul>
 
       <h4>Registos técnicos e auditoria</h4>
       <p>
         Para fins de auditoria técnica, monitorização operacional e controlo de custos de utilização dos serviços LLM,
-        são mantidos registos técnicos persistentes contendo apenas metadados de execução, incluindo o código do
-        utilizador, o código da ocorrência da UC, data e hora da execução, identificador técnico da
-        operação, modelo utilizado e custo estimado. Não são armazenados conteúdos processados nem credenciais de autenticação.
-        Estes registos são utilizados exclusivamente para fins operacionais, de auditoria e gestão de custos.
+        é mantido um registo técnico persistente (<code>_web_usage_log.jsonl</code>) que regista, por execução:
+        <i>timestamp</i> UTC, código do utilizador, identificador da ocorrência da UC, identificador técnico do <i>job</i>,
+        fornecedor e modelo LLM, custo estimado em USD e duração total. Não são armazenados conteúdos processados,
+        credenciais nem dados pessoais de estudantes. Estes registos são utilizados exclusivamente para fins operacionais,
+        de auditoria e gestão de custos, sendo conservados pelo período máximo de
+        <b>{WEB_USAGE_LOG_RETENTION_DAYS} dias</b>, após o que as entradas mais antigas são automaticamente
+        purgadas por rotina periódica.
       </p>
 
-      <h4>Retenção e exportação de dados</h4>
+      <h4>Retenção e exportação dos dados de execução</h4>
       <p>
-        Os dados gerados durante a execução podem ser exportados pelo utilizador em formato <code>.zip</code>.
-        Estes dados são removidos automaticamente do disco após um período máximo de
-        {WEB_OUTPUT_RETENTION_HOURS:.3g} hora(s) de retenção configurado no servidor.
+        Durante a execução, são gerados temporariamente em disco local da máquina virtual, na pasta do <i>job</i>:
+      </p>
+      <ul>
+        <li>enunciados extraídos do SIGARRA e do Moodle (PDF/HTML);</li>
+        <li>o <i>system prompt</i> e o <i>user prompt</i> enviados ao LLM;</li>
+        <li>a resposta do LLM / relatório gerado;</li>
+        <li>o <i>payload</i> técnico de pré-visualização para a página de revisão;</li>
+        <li>o <i>log</i> de execução do <i>job</i>.</li>
+      </ul>
+      <p>
+        Estes artefactos são removidos automaticamente do disco após um período máximo de
+        <b>{WEB_OUTPUT_RETENTION_HOURS:.3g} hora(s)</b> de retenção configurado no servidor, por uma rotina
+        periódica de limpeza. O utilizador pode exportar o conjunto em formato <code>.zip</code> a partir da
+        página de revisão, enquanto o <i>job</i> está retido.
+      </p>
+
+      <h4>Infraestrutura e <i>backups</i></h4>
+      <p>
+        A aplicação corre numa máquina virtual gerida pela UPdigital. Eventuais <i>snapshots</i> ou cópias de
+        segurança do disco da VM, a existirem, são geridos exclusivamente pela UPdigital no quadro da sua
+        política de operação de infraestrutura, <b>não estando integrados nem acessíveis pela aplicação ou
+        pelo seu responsável técnico</b>, e não são utilizados para aceder ou restaurar dados aplicacionais.
+        O acesso administrativo (SSH) à máquina virtual está restringido ao responsável técnico da aplicação.
       </p>
 
       <p class="muted">
