@@ -1910,7 +1910,8 @@ def privacidade():
         <li>lista de atividades e descrições (<i>intro</i>) de <i>assignments</i> no Moodle;</li>
         <li>estatísticas agregadas de resultados de avaliação da UC, da ocorrência anterior e de outras UCs do mesmo ano do curso;</li>
         <li>resultados agregados dos inquéritos pedagógicos (médias e medianas por pergunta, sem identificação)
-            da UC e da ocorrência anterior, bem como comentários anexos aos mesmos (apenas da ocorrência em análise).</li>
+            da UC e da ocorrência anterior, bem como os comentários anónimos anexos aos mesmos
+            (apenas da ocorrência em análise).</li>
       </ul>
       <p>
         Como medida adicional de minimização, a aplicação executa um <b>filtro automático de proteção de dados</b>
