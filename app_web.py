@@ -1874,8 +1874,13 @@ def privacidade():
       </p>
       <p>
         O desenvolvimento e a manutenção técnica são da responsabilidade do docente responsável pelo
-        pelouro da Melhoria Contínua. A infraestrutura aplicacional corre numa máquina virtual gerida pela
-        UPdigital, que assegura a operação da VM e da rede mas não acede à aplicação nem aos dados nela processados.
+        pelouro da Melhoria Contínua. A infraestrutura aplicacional corre presentemente numa máquina virtual
+        <b>disponibilizada pela UPdigital</b> (<code>coursemonitoring.fe.up.pt</code>, acedida através do
+        domínio <code>app.uc-reports.com</code>) no nível de serviço &laquo;não gerido&raquo; — a UPdigital
+        fornece a máquina virtual e a conectividade de rede, sendo a administração, atualização e operação
+        da responsabilidade do responsável técnico, que é também o único com acesso à aplicação e aos dados
+        nela processados. Está prevista a migração futura para <code>ucreview.fe.up.pt</code>, também
+        disponibilizada pela UPdigital no mesmo regime.
       </p>
 
       <h4>Autenticação e comunicação segura</h4>
@@ -1977,10 +1982,12 @@ def privacidade():
 
       <h4>Infraestrutura e <i>backups</i></h4>
       <p>
-        A aplicação corre numa máquina virtual gerida pela UPdigital. Eventuais <i>snapshots</i> ou cópias de
-        segurança do disco da VM, a existirem, são geridos exclusivamente pela UPdigital no quadro da sua
-        política de operação de infraestrutura, <b>não estando integrados nem acessíveis pela aplicação ou
-        pelo seu responsável técnico</b>, e não são utilizados para aceder ou restaurar dados aplicacionais.
+        A máquina virtual em que a aplicação corre é disponibilizada pela UPdigital no nível de serviço
+        &laquo;não gerido&raquo;, o que significa que <b>não dispõe de serviço de <i>backup</i></b>.
+        A infraestrutura subjacente garante apenas redundância de <i>hardware</i>, que mitiga falhas físicas
+        mas não constitui um <i>backup</i> nem permite recuperar ficheiros apagados (cf. Regulamento do Serviço
+        de Máquinas Virtuais da UPdigital). Não existem <i>snapshots</i> aplicacionais geridos pelo responsável
+        técnico. O mesmo regime aplicar-se-á à futura máquina virtual <code>ucreview.fe.up.pt</code>.
         O acesso administrativo (SSH) à máquina virtual está restringido ao responsável técnico da aplicação.
       </p>
 
