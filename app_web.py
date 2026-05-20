@@ -1874,13 +1874,8 @@ def privacidade():
       </p>
       <p>
         O desenvolvimento e a manutenção técnica são da responsabilidade do docente responsável pelo
-        pelouro da Melhoria Contínua. A infraestrutura aplicacional corre presentemente numa máquina virtual
-        <b>disponibilizada pela UPdigital</b> (<code>coursemonitoring.fe.up.pt</code>, acedida através do
-        domínio <code>app.uc-reports.com</code>) no nível de serviço &laquo;não gerido&raquo; — a UPdigital
-        fornece a máquina virtual e a conectividade de rede, sendo a administração, atualização e operação
-        da responsabilidade do responsável técnico, que é também o único com acesso à aplicação e aos dados
-        nela processados. Está prevista a migração futura para <code>ucreview.fe.up.pt</code>, também
-        disponibilizada pela UPdigital no mesmo regime.
+        pelouro da Melhoria Contínua. A infraestrutura aplicacional corre numa máquina virtual
+        disponibilizada pela UPdigital.
       </p>
 
       <h4>Autenticação e comunicação segura</h4>
@@ -1956,7 +1951,7 @@ def privacidade():
       <h4>Registos técnicos e auditoria</h4>
       <p>
         Para fins de auditoria técnica, monitorização operacional e controlo de custos de utilização dos serviços LLM,
-        é mantido um registo técnico persistente (<code>_web_usage_log.jsonl</code>) que regista, por execução:
+        é mantido um registo técnico persistente que regista, por execução:
         <i>timestamp</i> UTC, código do utilizador, identificador da ocorrência da UC, identificador técnico do <i>job</i>,
         fornecedor e modelo LLM, custo estimado em USD e duração total. Não são armazenados conteúdos processados,
         credenciais nem dados pessoais de estudantes. Estes registos são utilizados exclusivamente para fins operacionais,
