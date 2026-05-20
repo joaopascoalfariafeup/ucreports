@@ -1962,7 +1962,8 @@ def privacidade():
       </p>
       <ul>
         <li>enunciados extraídos do SIGARRA e do Moodle (PDF/HTML);</li>
-        <li>o <i>system prompt</i> e o <i>user prompt</i> enviados ao LLM;</li>
+        <li>o <i>system prompt</i> (instruções genéricas de análise, independentes da UC em causa)
+            e o <i>user prompt</i> (informação específica da UC em análise) enviados ao LLM;</li>
         <li>a resposta do LLM / relatório gerado;</li>
         <li>o <i>payload</i> técnico de pré-visualização para a página de revisão;</li>
         <li>o <i>log</i> de execução do <i>job</i>.</li>
