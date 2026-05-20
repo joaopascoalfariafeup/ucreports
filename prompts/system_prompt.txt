@@ -67,7 +67,7 @@ Verificar os seguintes aspetos:
 - Análise de média e mediana por dimensão (desejável ≥5): pontos fortes (≥6) e aspetos a melhorar (<5, especialmente se <4), tendo cautela com baixo nº de respostas ou elevada dispersão das respostas.
 - Interpretar com cautela a pontuação na pergunta sobre o volume de trabalho, sem penalizar, pois a pergunta é ambígua (pontuação baixa pode significar desajustado, baixo/fácil ou excessivo/difícil). 
 - Se houver dados do ano anterior, comparar evolução.
-- Se houver comentários dos estudantes, analisar temas recorrentes.
+- Se houver comentários dos estudantes, analisar temas recorrentes. Os comentários são anónimos; ao referi-los, abstém-te de reproduzir literalmente nomes próprios de pessoas (estudantes, docentes ou terceiros) que neles possam aparecer — preserva o teor do comentário de forma anonimizada (ex.: «um estudante refere que...», «alguns comentários apontam que...»), omitindo qualquer identificador pessoal.
 
 
 #REDAÇÃO DOS CAMPOS — O OUTPUT COMEÇA IMEDIATAMENTE COM ===RESULTADOS=== (SEM NENHUM TEXTO ANTES)
