@@ -59,6 +59,11 @@ OUTPUT_DIR = (
     else (_SCRIPT_DIR / "output").resolve()
 )
 
+# Política de Privacidade aprovada pela Unidade de Proteção de Dados da U.Porto.
+# Versão HTML (fragmento) servida na rota /privacidade; versão PDF oficial servida em /privacidade.pdf.
+_PRIVACIDADE_HTML = (_SCRIPT_DIR / "doc" / "privacidade.html").read_text(encoding="utf-8")
+_PRIVACIDADE_PDF_PATH = _SCRIPT_DIR / "doc" / "Política_de_Privacidade_e_Proteção_de_Dados_-_Ferramenta_FEUP_UPD.pdf"
+
 # armazenamento in-memory (local/single-user)
 _SESSOES: dict[str, SigarraSession] = {}
 _SESSOES_LOCK = threading.Lock()
@@ -1853,149 +1858,52 @@ def login():
     return _page("Login", body)
 
 
+@app.get("/privacidade.pdf")
+def privacidade_pdf():
+    """Serve o PDF oficial aprovado pela DPO."""
+    if not _PRIVACIDADE_PDF_PATH.is_file():
+        abort(404)
+    return send_file(
+        _PRIVACIDADE_PDF_PATH,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name="Politica_Privacidade_FEUP_UPD.pdf",
+    )
+
+
 @app.get("/privacidade")
 def privacidade():
-    body = f"""
+    # CSS local para a tabela de categorias de dados e callout do PDF
+    style = """
+    <style>
+      .dpo-pdf-callout { background:#eff6ff; border-left:4px solid var(--accent);
+                         padding:10px 14px; margin:0 0 18px; font-size:0.93em; }
+      .dpo-body h4 { margin-top:24px; }
+      .dpo-body h5 { margin-top:16px; font-size:1em; font-weight:600; }
+      .dpo-body ol { margin: 6px 0 10px; }
+      .dpo-body .dpo-table { border-collapse:collapse; width:100%; margin:14px 0; font-size:0.95em; }
+      .dpo-body .dpo-table td { border:1px solid var(--line); padding:8px 10px; vertical-align:top; }
+      .dpo-body .dpo-table tr:first-child td { background:#f3f4f6; font-weight:600; }
+      .dpo-body .dpo-table p { margin: 0; }
+    </style>
+    """
+    header = f"""
     <div class="card">
-      <h3>Política de privacidade e proteção de dados</h3>
-
-      <p class="muted">
-        Esta aplicação encontra-se em fase piloto de teste e validação institucional. Os conteúdos gerados com apoio
-        de modelos de inteligência artificial podem conter imprecisões e devem ser sempre revistos e confirmados
-        pelo utilizador antes da sua utilização ou submissão oficial.
-      </p>
-
-      <h4>Enquadramento institucional</h4>
-      <p>
-        A aplicação é disponibilizada no âmbito das atividades de melhoria contínua do ensino da FEUP,
-        sob responsabilidade institucional da Direção da FEUP, através do pelouro responsável pela área da
-        Melhoria Contínua. A aplicação apenas permite a análise e geração de relatórios relativos a unidades
-        curriculares (UCs) para as quais o utilizador autenticado possui permissões institucionais de regência.
-      </p>
-      <p>
-        O desenvolvimento e a manutenção técnica são da responsabilidade do pelouro da Melhoria
-        Contínua. A infraestrutura aplicacional corre numa máquina virtual disponibilizada pela UPdigital.
-      </p>
-
-      <h4>Autenticação e comunicação segura</h4>
-      <p>
-        A autenticação é efetuada exclusivamente através de <b>Autenticação Federada (OpenID Connect)</b>:
-        as credenciais são submetidas diretamente ao Fornecedor de Identidade da Universidade do Porto
-        (via Keycloak/open-id.up.pt), através de um formulário servido por essa infraestrutura.
-        A aplicação nunca recebe nem processa as credenciais do utilizador — apenas recebe um token
-        de autenticação emitido pelo IdP após autenticação bem-sucedida.
-      </p>
-      <p>
-        Toda a comunicação entre o utilizador e a aplicação é protegida através de ligações cifradas (HTTPS/TLS),
-        assegurando a confidencialidade e integridade dos dados em trânsito.
-      </p>
-
-      <h4>Dados acedidos pela aplicação</h4>
-      <p>
-        A sessão autenticada é usada para aceder a informação restrita necessária à análise da UC,
-        consistindo exclusivamente em dados institucionais e estatísticas agregadas (não sendo efetuado tratamento
-        de dados individuais de estudantes), incluindo, quando disponível:
-      </p>
-      <ul>
-        <li>ficha da UC (objetivos, resultados de aprendizagem, programa, métodos de avaliação);</li>
-        <li>sumários da UC;</li>
-        <li>enunciados de elementos de avaliação (PDF/HTML) recolhidos do SIGARRA, do Moodle ou de
-            <i>site</i> externo indicado na ficha SIGARRA da UC;</li>
-        <li>lista de atividades e descrições (<i>intro</i>) de <i>assignments</i> no Moodle;</li>
-        <li>estatísticas agregadas de resultados de avaliação da UC, da ocorrência anterior e de outras UCs do mesmo ano do curso;</li>
-        <li>resultados agregados dos inquéritos pedagógicos (médias e medianas por pergunta, sem identificação)
-            da UC e da ocorrência anterior, bem como os comentários anónimos anexos aos mesmos
-            (apenas da ocorrência em análise).</li>
-      </ul>
-      <p>
-        Como medida adicional de minimização, a aplicação executa um <b>filtro automático de proteção de dados</b>
-        sobre os enunciados extraídos, excluindo da análise pelo LLM ficheiros que apresentem indícios de
-        conter dados pessoais de estudantes (nomes, números de aluno, classificações). Os ficheiros excluídos
-        são reportados ao utilizador na página de revisão. Dos <i>quizzes</i> do Moodle é extraído apenas o
-        enunciado (perguntas) através do <i>preview</i> do docente, nunca respostas ou submissões de estudantes.
-      </p>
-
-      <h4>Utilização de modelos de linguagem (LLM)</h4>
-      <p>
-        A aplicação utiliza modelos de linguagem de grande escala (LLM) que, com base nos dados recolhidos,
-        apoiam a geração do relatório da UC. O relatório gerado é apresentado ao utilizador para revisão,
-        sendo a sua submissão ao SIGARRA efetuada apenas após confirmação explícita do utilizador.
-        Por defeito é utilizado o modelo <code>claude-opus-4-7</code> da Anthropic; o utilizador pode
-        alternativamente selecionar <code>gpt-4o</code> via IAedu. As garantias de privacidade e proteção
-        de dados aplicáveis dependem do fornecedor selecionado:
-      </p>
-      <ul>
-        <li>
-        <b>Via IAedu (modelo selecionável):</b> o processamento é efetuado através da infraestrutura Microsoft Azure AI
-        Foundry disponibilizada pelo serviço IAedu da FCT/FCCN (sem custos diretos para a unidade orgânica utilizadora),
-        limitado aos modelos aí disponibilizados. De acordo com a respetiva
-        <a href="https://iaedu.pt/pt/politica-de-privacidade-e-protecao-de-dados" target="_blank" rel="noopener noreferrer">política de privacidade</a>,
-        os dados não são armazenados, registados, transmitidos a terceiros, utilizados para treino de modelos
-        ou conservados sob qualquer forma.
-        </li>
-        <li>
-        <b>Via Anthropic API (fornecedor por defeito):</b> o processamento é efetuado através da API comercial da Anthropic.
-        A utilização da API implica aceitação dos Termos Comerciais da Anthropic, nos quais é
-        <a href="https://privacy.claude.com/en/articles/7996862-how-do-i-view-and-sign-your-data-processing-addendum-dpa" target="_blank" rel="noopener noreferrer">automaticamente incorporado</a>
-        o respetivo <i>Data Processing Addendum</i> (DPA), incluindo <i>Standard Contractual Clauses</i> (SCCs) para transferências
-        internacionais de dados. De acordo com a
-        <a href="https://privacy.claude.com/en/collections/10672411-data-handling-retention" target="_blank" rel="noopener noreferrer">informação publicada</a>,
-        os dados enviados não são utilizados para treino de modelos, podendo ser objeto de retenção temporária (limitada por defeito a 30 dias)
-        para fins de monitorização de segurança e prevenção de uso indevido. Os custos de utilização são suportados
-        institucionalmente pela FEUP, podendo ser definidos limites de utilização por utilizador no âmbito de
-        políticas de utilização responsável.
-        </li>
-      </ul>
-
-      <h4>Registos técnicos e auditoria</h4>
-      <p>
-        Para fins de auditoria técnica, monitorização operacional e controlo de custos de utilização dos serviços LLM,
-        é mantido um registo técnico persistente que regista, por execução:
-        <i>timestamp</i> UTC, código do utilizador, identificador da ocorrência da UC, identificador técnico do <i>job</i>,
-        fornecedor e modelo LLM, custo estimado em USD e duração total. Não são armazenados conteúdos processados,
-        credenciais nem dados pessoais de estudantes. Estes registos são utilizados exclusivamente para fins operacionais,
-        de auditoria e gestão de custos, sendo conservados pelo período máximo de
-        <b>{WEB_USAGE_LOG_RETENTION_DAYS} dias</b>, após o que as entradas mais antigas são automaticamente
-        purgadas por rotina periódica.
-      </p>
-
-      <h4>Retenção e exportação dos dados de execução</h4>
-      <p>
-        Durante a execução, são gerados temporariamente em disco local da máquina virtual, na pasta do <i>job</i>:
-      </p>
-      <ul>
-        <li>enunciados extraídos do SIGARRA e do Moodle (PDF/HTML);</li>
-        <li>o <i>system prompt</i> (instruções genéricas de análise, independentes da UC em causa)
-            e o <i>user prompt</i> (informação específica da UC em análise) enviados ao LLM;</li>
-        <li>a resposta do LLM / relatório gerado;</li>
-        <li>o <i>payload</i> técnico de pré-visualização para a página de revisão;</li>
-        <li>o <i>log</i> de execução do <i>job</i>.</li>
-      </ul>
-      <p>
-        Estes artefactos são removidos automaticamente do disco após um período máximo de
-        <b>{WEB_OUTPUT_RETENTION_HOURS:.3g} hora(s)</b> de retenção configurado no servidor, por uma rotina
-        periódica de limpeza. O utilizador pode exportar o conjunto em formato <code>.zip</code> a partir da
-        página de revisão, enquanto o <i>job</i> está retido.
-      </p>
-
-      <h4>Infraestrutura e <i>backups</i></h4>
-      <p>
-        A aplicação corre numa máquina virtual disponibilizada pela UPdigital, <b>sem serviço de
-        <i>backup</i> associado</b> — os dados de execução são definitivamente removidos do disco
-        após o prazo de retenção indicado acima. O acesso administrativo (SSH) à máquina virtual
-        está restringido ao responsável técnico da aplicação.
-      </p>
-
-      <p class="muted">
-        O código-fonte desta ferramenta é público e auditável em
-        <a href="https://github.com/joaopascoalfariafeup/ucreports" target="_blank" rel="noopener">github.com/joaopascoalfariafeup/ucreports</a>.
-      </p>
-
-      <p class="muted"><a href="{url_for('login')}">Voltar ao login</a></p>
+      <h3>Política de Privacidade e de Proteção de Dados</h3>
+      <div class="dpo-pdf-callout">
+        <strong>Versão oficial:</strong>
+        <a href="{url_for('privacidade_pdf')}" target="_blank" rel="noopener">documento PDF aprovado pela Unidade de Proteção de Dados da U.Porto</a>.
+        O texto abaixo reproduz integralmente esse documento.
+      </div>
+      <div class="dpo-body">
+    """
+    footer = f"""
+      </div>
+      <p class="muted" style="margin-top:18px;"><a href="{url_for('login')}">Voltar ao login</a></p>
     </div>
     """
-    return _page("Política de privacidade e proteção de dados", body)
-
+    body = style + header + _PRIVACIDADE_HTML + footer
+    return _page("Política de Privacidade e de Proteção de Dados", body)
 
 
 @app.get("/login/oidc")

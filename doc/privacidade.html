@@ -1,0 +1,100 @@
+<h4>1. ENQUADRAMENTO</h4>
+      <p>A presente aplicação é disponibilizada pela Faculdade de Engenharia da Universidade do Porto (FEUP), no âmbito das atividades de melhoria contínua do ensino, sob responsabilidade institucional da Direção da FEUP, através do pelouro respetivo.</p>
+      <p>A aplicação destina-se a apoiar os regentes de unidades curriculares na elaboração de relatórios pedagógicos, permitindo a análise de informação institucional e a geração de propostas de relatório com apoio de tecnologias de inteligência artificial.</p>
+      <p>A utilização da aplicação encontra-se limitada a utilizadores autenticados que disponham de permissões institucionais para a regência das unidades curriculares em causa.</p>
+      <p>As finalidades da presente aplicação contendem com o apoio na elaboração de relatórios de unidades curriculares; a capacidade de assegurar a monitorização técnica, auditoria e controlo de custos da utilização da aplicação e a forma de garantir a segurança e integridade do sistema.</p>
+      <p>De um ponto de vista de fundamento jurídico, o presente tratamento assenta no exercício de funções de interesse público no domínio da organização e melhoria do ensino superior.</p>
+      <h4>2. RESPONSÁVEL PELO TRATAMENTO E INTERVENIENTES</h4>
+      <p>O responsável pelo tratamento dos dados pessoais é a Direção da FEUP, no exercício das suas competências institucionais.</p>
+      <p>No âmbito da exploração técnica da aplicação, intervêm as seguintes entidades:</p>
+      <ol><li>Responsável técnico da aplicação, que assegura o seu desenvolvimento e manutenção por conta do responsável pelo tratamento;</li><li>UPdigital, enquanto entidade responsável pela infraestrutura tecnológica (máquina virtual e rede), não tendo acesso funcional aos dados tratados na aplicação;</li><li>Fornecedores de modelos de linguagem (LLM), conforme descrito infra, que atuam como destinatários de dados no contexto de serviços de processamento mediante API.</li>
+      </ol>
+      <h4>3. CATEGORIAS DE DADOS PESSOAIS</h4>
+      <table class="dpo-table">
+      <tr><td>
+      <p><strong>Categoria</strong></p></td><td>
+      <p><strong>Tipo de dados</strong></p></td><td>
+      <p><strong>Descrição</strong></p></td>
+      </tr>
+      <tr><td rowspan="2">
+      <p><strong>Dados institucionais</strong></p></td><td>
+      <p>Conteúdos pedagógicos e académicos</p></td><td>
+      <p>Ficha da unidade curricular (objetivos, conteúdos e métodos de avaliação), sumários, conteúdos e enunciados disponibilizados no SIGARRA e Moodle</p></td>
+      </tr>
+      <tr><td>
+      <p>Dados estatísticos agregados</p></td><td>
+      <p>Estatísticas agregadas de avaliação e resultados agregados de inquéritos pedagógicos (sem identificação individual)</p></td>
+      </tr>
+      <tr><td rowspan="2">
+      <p><strong>Dados pessoais de docentes</strong></p></td><td>
+      <p>Dados identificativos indiretos</p></td><td>
+      <p>Código do utilizador</p></td>
+      </tr>
+      <tr><td>
+      <p>Dados operacionais</p></td><td>
+      <p>Identificação da unidade curricular e registos técnicos de execução associados à utilização da aplicação</p></td>
+      </tr>
+      <tr><td rowspan="2">
+      <p><strong>Risco residual de dados pessoais de estudantes</strong></p></td><td>
+      <p>Dados potencialmente incluídos em ficheiros</p></td><td>
+      <p>A aplicação não visa o tratamento de dados pessoais de estudantes. Contudo, poderá ocorrer, a título excecional, a inclusão inadvertida de dados pessoais em conteúdos carregados (por exemplo, ficheiros)</p></td>
+      </tr>
+      <tr><td>
+      <p>Medidas de mitigação</p></td><td>
+      <p>Implementação de mecanismos automáticos de deteção e exclusão de conteúdos potencialmente contendo dados pessoais, impedindo o seu processamento subsequente</p></td>
+      </tr>
+      </table>
+      <h4>4. MODO DE RECOLHA DOS DADOS PESSOAIS</h4>
+      <p>Os dados tratados no âmbito da aplicação são obtidos a partir dos sistemas institucionais da Universidade do Porto, designadamente o SIGARRA e o Moodle, no contexto de uma sessão autenticada do utilizador. O acesso encontra-se estritamente limitado às unidades curriculares relativamente às quais o utilizador dispõe de permissões institucionais de regência.</p>
+      <p>O tratamento de dados desenvolve-se de forma sequencial e controlada, iniciando-se com a recolha de dados institucionais relevantes, seguida da sua análise e preparação interna. Sempre que aplicável, parte dessa informação pode ser temporariamente transmitida a fornecedores de modelos de linguagem, com vista ao apoio à geração de conteúdo.</p>
+      <p>Com base nesses dados, a aplicação produz uma proposta de relatório, que é apresentada ao utilizador para revisão. A eventual submissão do relatório no SIGARRA depende sempre de validação expressa por parte do utilizador, assegurando-se, assim, a existência de controlo humano em todas as fases decisivas do processo.</p>
+      <h4>5. UTILIZAÇÃO DE LLM (MODELOS DE LINGUAGEM)</h4>
+      <p>A aplicação recorre a modelos de linguagem de grande escala (LLM) como instrumento de apoio à elaboração dos relatórios de unidades curriculares, funcionando estes sistemas como ferramentas auxiliares de análise e geração de texto.</p>
+      <p>Por defeito, o processamento é efetuado através da API comercial da Anthropic, estando igualmente disponível, como alternativa, a utilização do serviço IAedu, assente na infraestrutura Azure AI Foundry disponibilizada pela FCT/FCCN.</p>
+      <p>No âmbito desta funcionalidade, são transmitidos apenas os dados estritamente necessários à geração do relatório, incluindo conteúdos programáticos e pedagógicos, sumários, enunciados de avaliação (após conversão para formato textual) e estatísticas agregadas. Não são, em caso algum, transmitidas credenciais de autenticação, dados individuais de estudantes ou quaisquer conteúdos previamente excluídos pelos mecanismos automáticos de filtragem.</p>
+      <p>O tratamento obedece a princípios de minimização e necessidade, sendo assegurado, designadamente, que apenas são enviados dados em formato textual, com exclusão de metadados associados aos ficheiros, e que quaisquer conteúdos potencialmente suscetíveis de conter dados pessoais são previamente identificados e removidos. Sempre que possível, é privilegiada a utilização de dados agregados, sendo ainda assegurado que o resultado gerado pelo sistema é sujeito a validação humana antes de qualquer utilização institucional.</p>
+      <p>Relativamente à retenção de dados pelos fornecedores, o serviço IAedu não procede ao armazenamento nem à reutilização da informação submetida, enquanto, no caso da Anthropic, poderá ocorrer retenção temporária limitada, exclusivamente para efeitos de segurança e prevenção de utilização abusiva, não sendo os dados utilizados para treino de modelos, nos termos contratuais aplicáveis.</p>
+      <h4>6. REGISTOS TÉCNICOS E AUDITORIAS</h4>
+      <p>Para fins de auditoria e gestão operacional, são mantidos registos técnicos contendo apenas metadados, incluindo:</p>
+      <ol><li>data e hora (timestamp);</li><li>código do utilizador;</li><li>unidade curricular;</li><li>identificador da operação;</li><li>modelo utilizado;</li><li>custo estimado;</li><li>duração da execução.</li>
+      </ol>
+      <p>Estes registos não incluem conteúdos processados, não incluem credenciais e são utilizados exclusivamente para fins técnicos e de controlo de custos, sendo conservados até, previsivelmente, 365 dias.</p>
+      <h4>7. CONSERVAÇÃO E RETENÇÃO DE DADOS</h4>
+      <p>O tratamento de dados pessoais no âmbito da aplicação observa o princípio da limitação da conservação, sendo os dados mantidos apenas durante o período estritamente necessário à prossecução das finalidades que motivam o respetivo tratamento.</p>
+      <p>Distinguem‑se, para o efeito, as seguintes categorias de dados e respetivos prazos de conservação:</p>
+      <h5>Dados de execução da aplicação</h5>
+      <p>Os dados gerados durante a utilização da aplicação, incluindo conteúdos temporários, ficheiros de apoio à geração de relatórios e resultados produzidos, são armazenados de forma transitória em ambiente controlado e automaticamente eliminados após um período máximo de 1 hora, contado desde a respetiva criação.</p>
+      <p>Esta retenção limitada visa exclusivamente permitir a revisão e eventual submissão do relatório pelo utilizador, não sendo os dados conservados para quaisquer outras finalidades.</p>
+      <h5>Sessões de autenticação</h5>
+      <p>As sessões de utilizador são temporárias e expiram automaticamente após um período de inatividade, não sendo armazenadas credenciais de autenticação em qualquer momento.</p>
+      <h5>Registos técnicos e metadados de utilização</h5>
+      <p>Para fins de auditoria técnica, monitorização do funcionamento do sistema e controlo de custos associados à utilização de serviços externos, são mantidos registos técnicos contendo exclusivamente metadados, designadamente:</p>
+      <ul><li>data e hora da operação;</li><li>identificador do utilizador;</li><li>identificação da unidade curricular;</li><li>identificador técnico da operação;</li><li>modelo de linguagem utilizado;</li><li>custos e duração de execução.</li>
+      </ul>
+      <p>Estes registos não incluem conteúdos processados nem dados pessoais de estudantes e são conservados por um período máximo de 365 dias, findo o qual são automaticamente eliminados.</p>
+      <h5>Infraestrutura e inexistência de backups aplicacionais</h5>
+      <p>Os dados tratados pela aplicação não são objeto de backup aplicacional, sendo armazenados em infraestrutura que assegura exclusivamente redundância técnica ao nível do hardware.</p>
+      <p>Atendendo à sua natureza temporária ou meramente técnica, a eventual perda desses dados não afeta os direitos e liberdades dos titulares, nem compromete a integridade do tratamento.</p>
+      <h4>8. SEGURANÇA DO TRATAMENTO</h4>
+      <p>A aplicação adota um conjunto de medidas técnicas e organizativas adequadas à natureza, âmbito, contexto e finalidades do tratamento, bem como aos riscos identificados para os direitos e liberdades dos titulares dos dados, nos termos do artigo 32.º do Regulamento (UE) 2016/679 (RGPD).</p>
+      <p>Em particular, são implementadas as seguintes medidas:</p>
+      <ol><li>Cifragem das comunicações: todos os dados transmitidos entre o utilizador e a aplicação circulam através de protocolos seguros (HTTPS/TLS), garantindo a confidencialidade e integridade da informação em trânsito;</li><li>Autenticação segura e federada: a autenticação dos utilizadores é assegurada através de mecanismos institucionais (Shibboleth/SAML2), sendo as credenciais tratadas exclusivamente pelos sistemas de identidade da Universidade do Porto, não transitando nem sendo armazenadas pela aplicação;</li><li>Não armazenamento de credenciais: a aplicação não procede, em nenhum momento, ao armazenamento, registo ou tratamento de credenciais de autenticação dos utilizadores;</li><li>Controlo de acessos baseado em permissões institucionais: o acesso à informação encontra‑se limitado às unidades curriculares para as quais o utilizador possui legitimamente permissões de regência, assegurando o princípio da necessidade de conhecimento;</li><li>Segregação lógica dos dados: os dados são organizados e tratados de forma segregada por unidade curricular e por sessão de execução, prevenindo acessos indevidos entre diferentes contextos;</li><li>Eliminação automática de dados temporários: os dados gerados durante a execução da aplicação são automaticamente eliminados após um período máximo de retenção previamente definido, reduzindo o risco de conservação excessiva;</li><li>Monitorização e controlo de utilização: são implementados mecanismos de registo técnico e limitação de utilização (incluindo controlo de custos), permitindo a deteção de padrões anómalos ou utilizações indevidas;</li><li>Filtragem e sanitização de conteúdos: os conteúdos processados são sujeitos a mecanismos de filtragem e sanitização, incluindo a deteção automatizada de elementos potencialmente contendo dados pessoais, com vista à sua exclusão antes de qualquer tratamento subsequente.</li>
+      </ol>
+      <h4>9. GESTÃO DE INCIDENTES</h4>
+      <p>A aplicação dispõe de procedimentos destinados a assegurar a deteção, resposta e mitigação de incidentes de segurança, incluindo eventuais violações de dados pessoais, nos termos previstos nos artigos 33.º e 34.º do RGPD.</p>
+      <p>Em caso de incidente, são adotadas, designadamente, as seguintes medidas:</p>
+      <ol><li>Comunicação imediata interna às entidades competentes da FEUP, incluindo a Unidade de Proteção de Dados da Universidade do Porto, para efeitos de avaliação do incidente e eventual notificação às autoridades e aos titulares dos dados, nos termos legais aplicáveis;</li><li>Implementação de medidas técnicas de contenção e mitigação, podendo incluir, quando necessário, a suspensão temporária da aplicação ou de funcionalidades específicas;</li><li>Análise dos registos técnicos disponíveis, com vista à identificação da origem, natureza e extensão do incidente;</li><li>Adoção de medidas corretivas destinadas a prevenir a repetição do incidente e reforçar o nível de segurança do sistema.</li>
+      </ol>
+      <h4>10. DIREITOS DOS TITULARES</h4>
+      <p>Nos termos do Regulamento (UE) 2016/679, os titulares dos dados pessoais dispõem, quando aplicável, dos seguintes direitos:</p>
+      <ol><li>direito de acesso aos dados que lhes digam respeito;</li><li>direito de retificação de dados inexatos ou incompletos;</li><li>direito à limitação do tratamento;</li><li>direito de oposição ao tratamento, nos termos legalmente previstos.</li>
+      </ol>
+      <p>O exercício destes direitos é efetuado através dos canais institucionais da Universidade do Porto, designadamente através da Plataforma - <a href="https://www.up.pt/pdados/" rel="noopener noreferrer" target="_blank">https://www.up.pt/pdados/</a> - podendo implicar a verificação da identidade do requerente, de modo a salvaguardar a confidencialidade dos dados.</p>
+      <h4>11. CONTACTOS</h4>
+      <p>Para quaisquer questões relacionadas com o funcionamento da aplicação, bem como com o tratamento de dados pessoais subjacente, encontram-se disponíveis os seguintes contactos:</p>
+      <ul><li><strong>Contacto operacional (aplicação)</strong> Para esclarecimentos técnicos, reporte de anomalias ou questões relacionadas com a utilização da ferramenta:<br/><a href="mailto:melhoria.continua@fe.up.pt">melhoria.continua@fe.up.pt</a>.</li><li><strong>Unidade de Proteção de Dados da Universidade do Porto</strong></li><li>Para questões relacionadas com proteção de dados pessoais, incluindo o exercício dos direitos dos titulares: poderá aceder à Plataforma <a href="https://www.up.pt/pdados/" rel="noopener noreferrer" target="_blank">https://www.up.pt/pdados/</a> ou enviar um e-mail para <a href="mailto:dados.pessoais@up.pt">dados.pessoais@up.pt</a> | <a href="mailto:dpo@reit.up.pt">dpo@reit.up.pt</a> </li><li>Adicionalmente, os titulares dos dados têm o direito de apresentar reclamação junto da autoridade de controlo competente: <strong>Comissão Nacional de Proteção de Dados (CNPD)</strong> através do site <a href="https://www.cnpd.pt" rel="noopener noreferrer" target="_blank">https://www.cnpd.pt</a> </li>
+      </ul>
+      <h4>12. ATUALIZAÇÕES DA POLÍTICA DE PRIVACIDADE E DE PROTEÇÃO DE DADOS</h4>
+      <p>A presente Política de Privacidade e Proteção de Dados poderá ser objeto de revisão e atualização a todo o tempo, designadamente sempre que ocorram alterações: no funcionamento da aplicação, nas categorias de dados tratados ou finalidades do tratamento, no enquadramento legal aplicável.</p>
+      <p>Mais se informa que as versões atualizadas serão disponibilizadas através dos meios institucionais adequados, assegurando a transparência junto dos utilizadores.</p>
+      <p><em>Data da última versão: 22 de maio de 2026</em></p>

@@ -7,5 +7,9 @@ output/
 .claudeignore
 .pids
 *.log
-doc/
+doc/*
+# Política de Privacidade (servida pela app) e respectivas fontes — versionar
+!doc/privacidade.html
+!doc/Política_de_Privacidade_e_Proteção_de_Dados_-_Ferramenta_FEUP_UPD.pdf
+!doc/Política_de_Privacidade_e_Proteção_de_Dados_-_Ferramenta_FEUP_UPD.docx
 install.txt
