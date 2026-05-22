@@ -1890,14 +1890,10 @@ def privacidade():
     """
     header = f"""
     <div class="card">
-      <p class="muted" style="text-align:center;margin:0;font-size:0.92em;">Assistente de Apoio à Elaboração de Relatório de Unidades Curriculares</p>
-      <p class="muted" style="text-align:center;margin:0 0 14px;font-size:0.92em;">Faculdade de Engenharia da Universidade do Porto (FEUP)</p>
-      <h3 style="text-align:center;">Política de Privacidade e de Proteção de Dados</h3>
-      <div class="dpo-pdf-callout">
-        <strong>Versão oficial:</strong>
-        <a href="{url_for('privacidade_pdf')}" target="_blank" rel="noopener">documento PDF aprovado pela Unidade de Proteção de Dados da U.Porto</a>.
-        O texto abaixo reproduz integralmente esse documento.
-      </div>
+      <h3>Política de Privacidade e de Proteção de Dados</h3>
+      <p class="muted" style="margin:0 0 14px;">
+        <a href="{url_for('privacidade_pdf')}" target="_blank" rel="noopener">Versão em PDF</a>
+      </p>
       <div class="dpo-body">
     """
     footer = f"""
