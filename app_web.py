@@ -1876,15 +1876,16 @@ def privacidade():
     # CSS local para a tabela de categorias de dados e callout do PDF
     style = """
     <style>
-      .dpo-pdf-callout { background:#eff6ff; border-left:4px solid var(--accent);
+      .dpo-pdf-callout { background:#eff6ff; border-left:4px solid #2563eb;
                          padding:10px 14px; margin:0 0 18px; font-size:0.93em; }
       .dpo-body h4 { margin-top:24px; }
       .dpo-body h5 { margin-top:16px; font-size:1em; font-weight:600; }
       .dpo-body ol { margin: 6px 0 10px; }
-      .dpo-body .dpo-table { border-collapse:collapse; width:100%; margin:14px 0; font-size:0.95em; }
-      .dpo-body .dpo-table td { border:1px solid var(--line); padding:8px 10px; vertical-align:top; }
-      .dpo-body .dpo-table tr:first-child td { background:#f3f4f6; font-weight:600; }
-      .dpo-body .dpo-table p { margin: 0; }
+      .dpo-body table.dpo-table { border-collapse:collapse !important; width:100%; margin:14px 0; font-size:0.95em; }
+      .dpo-body table.dpo-table td,
+      .dpo-body table.dpo-table th { border:1px solid #d1d5db !important; padding:8px 10px; vertical-align:top; }
+      .dpo-body table.dpo-table tr:first-child td { background:#f3f4f6; font-weight:600; }
+      .dpo-body table.dpo-table p { margin: 0; }
     </style>
     """
     header = f"""
