@@ -338,6 +338,27 @@ class SigarraSession:
 
         return dados
 
+    @staticmethod
+    def _inspect_jwt(token: str) -> dict:
+        """Descodifica o payload de um JWT sem validar assinatura (apenas debug)."""
+        try:
+            import base64 as _b64
+            parts = token.split(".")
+            if len(parts) < 2:
+                return {"erro": "token sem payload (não é JWT)"}
+            pad = "=" * (-len(parts[1]) % 4)
+            payload = json.loads(_b64.urlsafe_b64decode(parts[1] + pad))
+            return {
+                "aud": payload.get("aud", "<ausente>"),
+                "iss": payload.get("iss", "<ausente>"),
+                "azp": payload.get("azp", "<ausente>"),
+                "preferred_username": payload.get("preferred_username", ""),
+                "exp": payload.get("exp", ""),
+                "scope": payload.get("scope", ""),
+            }
+        except Exception as e:  # noqa: BLE001
+            return {"erro": f"falha a descodificar JWT: {e}"}
+
     @classmethod
     def from_oidc_token(cls, access_token: str, codigo: str) -> "SigarraSession":
         """Troca access_token OIDC por sessão SIGARRA via GET Bearer.
@@ -346,11 +367,21 @@ class SigarraSession:
         Requer que o access_token tenha o campo ``aud`` com o identificador
         do serviço SIGARRA (configuração do Audience Mapper no Keycloak UP).
 
+        Em caso de falha, a excepção lançada inclui informação de debug
+        do JWT (aud, iss, azp) para facilitar diagnóstico de configuração
+        do cliente Keycloak.
+
         Raises:
             PermissionError: token inválido (HTTP 403) ou sem cookies.
             RuntimeError: erro HTTP (ex: 500 se aud em falta no token).
             ConnectionError: erro de rede.
         """
+        jwt_info = cls._inspect_jwt(access_token)
+        jwt_summary = (
+            f"aud={jwt_info.get('aud')!r}, iss={jwt_info.get('iss')!r}, "
+            f"azp={jwt_info.get('azp')!r}"
+        )
+
         sess = cls.__new__(cls)
         sess._cookie_jar = http.cookiejar.CookieJar()
         sess._opener = urllib.request.build_opener(
@@ -369,21 +400,48 @@ class SigarraSession:
         })
         try:
             with sess._lock:
-                sess._opener.open(req, timeout=15)
-            if not list(sess._cookie_jar):
-                raise PermissionError("SIGARRA não devolveu cookies de sessão para o token OIDC")
+                resp = sess._opener.open(req, timeout=15)
+                try:
+                    resp_body = resp.read().decode("utf-8", errors="replace")[:300]
+                except Exception:
+                    resp_body = ""
+                resp_status = resp.status
+                resp_ctype = resp.headers.get("Content-Type", "")
+            cookie_names = sorted({c.name for c in sess._cookie_jar})
+            if not cookie_names:
+                raise PermissionError(
+                    f"SIGARRA não devolveu cookies de sessão (HTTP {resp_status}, "
+                    f"Content-Type={resp_ctype!r}, body[:100]={resp_body[:100]!r}, "
+                    f"JWT: {jwt_summary})"
+                )
             sess._autenticado = True
+            sess._oidc_debug_info = {
+                "status": resp_status,
+                "cookies": cookie_names,
+                "jwt": jwt_info,
+            }
             return sess
         except urllib.error.HTTPError as e:
             try:
                 body = e.read().decode("utf-8", errors="replace")[:300]
             except Exception:
                 body = ""
+            ctype = ""
+            try:
+                ctype = e.headers.get("Content-Type", "")
+            except Exception:
+                pass
+            detail = (
+                f"HTTP {e.code} (Content-Type={ctype!r}, body[:200]={body[:200]!r}, "
+                f"JWT: {jwt_summary})"
+            )
             if e.code == 403:
-                raise PermissionError(f"Token OIDC rejeitado (HTTP 403){': ' + body if body else ''}") from e
-            raise RuntimeError(f"Erro HTTP {e.code} ao trocar token OIDC{': ' + body if body else ''}") from e
+                raise PermissionError(f"Token OIDC rejeitado: {detail}") from e
+            raise RuntimeError(f"Erro ao trocar token OIDC: {detail}") from e
         except urllib.error.URLError as e:
-            raise ConnectionError(f"Erro de rede ao contactar endpoint OIDC SIGARRA: {e}") from e
+            raise ConnectionError(
+                f"Erro de rede ao contactar endpoint OIDC SIGARRA: {e} (JWT: {jwt_summary})"
+            ) from e
 
     def clone_para_utilizador(self, codigo: str) -> "SigarraSession":
         """Cria uma SigarraSession com os cookies desta sessão mas para um utilizador diferente.

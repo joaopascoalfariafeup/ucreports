@@ -45,6 +45,15 @@ load_env()
 app = Flask(__name__)
 app.secret_key = os.environ.get("WEB_SECRET_KEY") or secrets.token_hex(32)
 
+# Garantir que app.logger.info(...) chega ao waitress.log (default WARNING era restritivo demais
+# para diagnóstico do fluxo OIDC). Combinado com PYTHONUNBUFFERED=1 no arrancar.sh.
+import logging as _logging
+app.logger.setLevel(_logging.INFO)
+if not app.logger.handlers:
+    _h = _logging.StreamHandler()
+    _h.setFormatter(_logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    app.logger.addHandler(_h)
+
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
@@ -2017,12 +2026,26 @@ def login_oidc_callback():
     user_sess = None
     flask_session.pop("oidc_sess_debug", None)
     _at = token_data.get("access_token", "")
+
+    # Diagnóstico independente do resultado: descodificar JWT para registar claims
+    _jwt = SigarraSession._inspect_jwt(_at)
+    app.logger.info(
+        "login_oidc_callback: codigo=%s, JWT aud=%r iss=%r azp=%r",
+        codigo, _jwt.get("aud"), _jwt.get("iss"), _jwt.get("azp"),
+    )
+
     try:
         user_sess = SigarraSession.from_oidc_token(_at, codigo)
-        flask_session["oidc_sess_debug"] = "ok"
-        app.logger.info("login_oidc_callback: sessão SIGARRA obtida para %s", codigo)
+        debug = getattr(user_sess, "_oidc_debug_info", {})
+        flask_session["oidc_sess_debug"] = (
+            f"ok (HTTP {debug.get('status','?')}, cookies={debug.get('cookies', [])})"
+        )
+        app.logger.info(
+            "login_oidc_callback: sessão SIGARRA OBTIDA para %s — cookies=%s",
+            codigo, debug.get("cookies", []),
+        )
     except Exception as e:
-        app.logger.warning("login_oidc_callback: %s", e)
+        app.logger.warning("login_oidc_callback: from_oidc_token falhou: %s", e)
         flask_session["oidc_sess_debug"] = str(e)
 
     # Fallback: clonar sessão do servidor
@@ -2187,8 +2210,23 @@ def ucs():
     elif docente_nome:
         docente_label = docente_nome
 
-    # --- Bloco de administração (impersonação) ---
+    # --- Bloco de administração (impersonação + diagnóstico OIDC) ---
     admin_block = ""
+    if is_admin and flask_session.get("login_method") == "oidc":
+        sess_type = flask_session.get("oidc_sess_type", "?")
+        sess_debug = flask_session.get("oidc_sess_debug", "")
+        if sess_type == "direct":
+            badge_bg, badge_fg, badge_label = "#d1fae5", "#065f46", "OIDC ✓ direct"
+        elif sess_type == "clone":
+            badge_bg, badge_fg, badge_label = "#fef3c7", "#92400e", "OIDC ⚠ clone (fallback)"
+        else:
+            badge_bg, badge_fg, badge_label = "#fee2e2", "#991b1b", f"OIDC ? {sess_type}"
+        admin_block += f"""
+        <div style="margin:0 0 12px;padding:8px 12px;background:{badge_bg};color:{badge_fg};
+                    border-radius:6px;font-size:0.85em;font-family:monospace;">
+          <strong>[admin] Sessão SIGARRA:</strong> {_esc(badge_label)}
+          <br><span style="opacity:0.85;">{_esc(sess_debug)}</span>
+        </div>"""
     if impersonated:
         nome_imp = f"{docente_nome} ({doc_codigo})" if docente_nome else doc_codigo
         admin_block += f"""

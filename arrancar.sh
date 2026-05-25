@@ -107,6 +107,9 @@ WEB_THREADS=${WEB_THREADS:-8}
 # --- arrancar servidor web ---
 echo "[INFO] A iniciar servidor web em http://$LISTEN (threads=$WEB_THREADS) ..."
 cd "$ROOT"
+# PYTHONUNBUFFERED=1 garante que app.logger / print chegam a waitress.log
+# em tempo real (sem buffering quando stdout é pipe/ficheiro).
+export PYTHONUNBUFFERED=1
 if [[ $IS_WSL -eq 1 ]]; then
   py.exe -m waitress --listen="$LISTEN" --threads="$WEB_THREADS" app_web:app &> "$ROOT/waitress.log" &
 else
