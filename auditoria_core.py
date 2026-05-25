@@ -367,19 +367,21 @@ def analisar_uc(
 
     # --- Verificação antecipada de sessão SIGARRA ---
     # vig_geral.docentes_vigilancias_list retorna HTTP 200 com "Não tem permissões"
-    # no corpo quando a sessão é inválida (autenticação federada com consentimento quebrado).
+    # no corpo quando a sessão é silenciosamente inválida (federada com consentimento
+    # quebrado). Qualquer outro erro (incluindo 403) é ignorado — pode ser uma
+    # restrição específica do endpoint para sessões OIDC sem indicar sessão inválida
+    # (e a ficha UC, que também é restrita, já confirmou que a sessão funciona).
     if sessao.codigo_pessoal:
+        _check_html = None
         try:
             _check_html = sessao.fetch_html(
                 f"{SIGARRA_HOME_BASE}/vig_geral.docentes_vigilancias_list"
                 f"?p_func_codigo={sessao.codigo_pessoal}"
             )
-            if "Não tem permissões" in _check_html:
-                raise PermissionError("Sessão SIGARRA inválida — faça logout e login novamente.")
-        except PermissionError:
-            raise
         except Exception:
-            pass  # falha de rede ou outro erro transitório — não bloquear
+            pass  # 403 do vig_geral / falha de rede — não bloquear
+        if _check_html and "Não tem permissões" in _check_html:
+            raise PermissionError("Sessão SIGARRA inválida — faça logout e login novamente.")
 
     log.info(f"\n--- Programa ---\n")
     log.info(ficha["programa"])
