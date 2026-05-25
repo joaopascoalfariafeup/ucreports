@@ -623,11 +623,16 @@ class SigarraSession:
                 body = ""
 
             if e.code == 401:
-                raise PermissionError(f"Sessão expirada / não autenticado (HTTP 401)") from e
+                raise PermissionError(
+                    f"Sessão expirada / não autenticado (HTTP 401) ao aceder a {url}"
+                ) from e
             if e.code == 403:
-                raise PermissionError(f"Sem permissão para aceder a esta página (HTTP 403)") from e
+                raise PermissionError(
+                    f"Sem permissão para aceder a esta página (HTTP 403) "
+                    f"— URL: {url} — body[:200]: {body[:200]!r}"
+                ) from e
             if e.code == 404:
-                raise ValueError(f"Página não encontrada (404) ao aceder ao URL") from e
+                raise ValueError(f"Página não encontrada (404) ao aceder a {url}") from e
 
             # outros HTTP (500, 503, etc.)
             raise RuntimeError(f"Erro HTTP {e.code} ao aceder a {url}. {body[:200]}") from e
