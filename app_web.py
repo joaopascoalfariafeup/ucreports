@@ -1854,17 +1854,60 @@ def home():
     return redirect(url_for("ucs"))
 
 
-@app.get("/login")
-def login():
-    body = f"""
+def _login_body(error: str = "") -> str:
+    csrf = _get_csrf_token()
+    err_html = f'<p class="status-err" style="margin:8px 0 0;">{_esc(error)}</p>' if error else ""
+    return f"""
     <div class="card">
       <p style="margin-top:14px;">
         <a href="{url_for('login_oidc')}" style="font-size:1.1em;">Autenticação Federada U.Porto</a>
       </p>
-      <p class="muted"><a href="{url_for('privacidade')}">Política de privacidade e proteção de dados</a></p>
+      <details style="margin:18px 0 0;">
+        <summary style="cursor:pointer;color:var(--muted);font-size:0.93em;">
+          Em alternativa, autenticar com password SIGARRA
+          <span style="font-size:0.85em;">(temporário, enquanto a autenticação federada está em manutenção)</span>
+        </summary>
+        <form method="post" action="{url_for('login_password')}" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;max-width:320px;">
+          <input type="hidden" name="csrf_token" value="{_esc(csrf)}">
+          <label style="font-size:0.9em;">Login SIGARRA (ex.: up210006)
+            <input type="text" name="login" autocomplete="username" required style="width:100%;padding:6px 8px;">
+          </label>
+          <label style="font-size:0.9em;">Password SIGARRA
+            <input type="password" name="password" autocomplete="current-password" required style="width:100%;padding:6px 8px;">
+          </label>
+          <button type="submit" class="btn" style="align-self:flex-start;">Entrar</button>
+          {err_html}
+        </form>
+      </details>
+      <p class="muted" style="margin-top:18px;"><a href="{url_for('privacidade')}">Política de privacidade e proteção de dados</a></p>
     </div>
     """
-    return _page("Login", body)
+
+
+@app.get("/login")
+def login():
+    return _page("Login", _login_body())
+
+
+@app.post("/login")
+def login_password():
+    """Autenticação directa SIGARRA por password (alternativa enquanto o bridge OIDC está limitado)."""
+    _require_csrf()
+    login_val = request.form.get("login", "").strip()
+    password = request.form.get("password", "")
+    if not login_val or not password:
+        return _page("Login", _login_body(error="Indique login e password."))
+    try:
+        sess = SigarraSession()
+        sess.autenticar(login=login_val, password=password)
+    except PermissionError as e:
+        return _page("Login", _login_body(error=str(e)))
+    except Exception as e:  # noqa: BLE001
+        return _page("Login", _login_body(error=f"Erro ao autenticar: {e}"))
+    _set_sigarra_session(sess)
+    flask_session["sigarra_login"] = login_val if "@" in login_val else f"{login_val}@up.pt"
+    flask_session["login_method"] = "password"
+    return redirect(url_for("ucs"))
 
 
 @app.get("/privacidade.pdf")
