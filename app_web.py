@@ -184,6 +184,9 @@ _REVIEW_ERROR_INJECTION = int(os.environ.get("REVIEW_ERROR_INJECTION", "0").stri
 # Se 1 (default), lista de UCs restringe-se a UCs em que o docente é regente.
 # Se 0, todos os docentes da UC podem gerar relatório (útil para testes).
 _ACESSO_APENAS_REGENTE = os.environ.get("WEB_ACESSO_APENAS_REGENTE", "1").strip() != "0"
+# Login alternativo SIGARRA por password (oculto por defeito). Activar com WEB_PASSWORD_LOGIN_ENABLED=1
+# apenas quando o bridge OIDC SIGARRA estiver indisponível.
+_PASSWORD_LOGIN_ENABLED = os.environ.get("WEB_PASSWORD_LOGIN_ENABLED", "0").strip() == "1"
 _REVIEW_ERROR_COUNT = int(os.environ.get("REVIEW_ERROR_COUNT", "3"))
 _REVIEW_ERROR_TOLERANCE = int(os.environ.get("REVIEW_ERROR_TOLERANCE", "1"))
 WEB_MAX_USD_PER_USER_PER_MONTH = float(
@@ -1480,7 +1483,6 @@ def _page(title: str, body: str, step: int = 0) -> str:
     <div class="app-header">
       <div class="app-brandrow">
         <div class="app-brand">Assistente de Apoio à Elaboração de Relatórios de Unidades Curriculares</div>
-        <span class="pill">Piloto</span>
       </div>
       <div class="app-subtitle">FEUP · Melhoria Contínua</div>
     </div>
@@ -1857,11 +1859,11 @@ def home():
 def _login_body(error: str = "") -> str:
     csrf = _get_csrf_token()
     err_html = f'<p class="status-err" style="margin:8px 0 0;">{_esc(error)}</p>' if error else ""
-    return f"""
-    <div class="card">
-      <p style="margin-top:14px;">
-        <a href="{url_for('login_oidc')}" style="font-size:1.1em;">Autenticação Federada U.Porto</a>
-      </p>
+    # Login alternativo por password está oculto por defeito; activar com
+    # WEB_PASSWORD_LOGIN_ENABLED=1 apenas quando o bridge OIDC SIGARRA estiver indisponível.
+    password_block = ""
+    if _PASSWORD_LOGIN_ENABLED:
+        password_block = f"""
       <details style="margin:18px 0 0;">
         <summary style="cursor:pointer;color:var(--muted);font-size:0.93em;">
           Em alternativa, autenticar com password SIGARRA
@@ -1878,7 +1880,13 @@ def _login_body(error: str = "") -> str:
           <button type="submit" class="btn" style="align-self:flex-start;">Entrar</button>
           {err_html}
         </form>
-      </details>
+      </details>"""
+    return f"""
+    <div class="card">
+      <p style="margin-top:14px;">
+        <a href="{url_for('login_oidc')}" style="font-size:1.1em;">Autenticação Federada U.Porto</a>
+      </p>
+      {password_block}
       <p class="muted" style="margin-top:18px;"><a href="{url_for('privacidade')}">Política de privacidade e proteção de dados</a></p>
     </div>
     """
@@ -1891,7 +1899,9 @@ def login():
 
 @app.post("/login")
 def login_password():
-    """Autenticação directa SIGARRA por password (alternativa enquanto o bridge OIDC está limitado)."""
+    """Autenticação directa SIGARRA por password (gated por WEB_PASSWORD_LOGIN_ENABLED)."""
+    if not _PASSWORD_LOGIN_ENABLED:
+        abort(404)
     _require_csrf()
     login_val = request.form.get("login", "").strip()
     password = request.form.get("password", "")
@@ -2253,23 +2263,8 @@ def ucs():
     elif docente_nome:
         docente_label = docente_nome
 
-    # --- Bloco de administração (impersonação + diagnóstico OIDC) ---
+    # --- Bloco de administração (impersonação) ---
     admin_block = ""
-    if is_admin and flask_session.get("login_method") == "oidc":
-        sess_type = flask_session.get("oidc_sess_type", "?")
-        sess_debug = flask_session.get("oidc_sess_debug", "")
-        if sess_type == "direct":
-            badge_bg, badge_fg, badge_label = "#d1fae5", "#065f46", "OIDC ✓ direct"
-        elif sess_type == "clone":
-            badge_bg, badge_fg, badge_label = "#fef3c7", "#92400e", "OIDC ⚠ clone (fallback)"
-        else:
-            badge_bg, badge_fg, badge_label = "#fee2e2", "#991b1b", f"OIDC ? {sess_type}"
-        admin_block += f"""
-        <div style="margin:0 0 12px;padding:8px 12px;background:{badge_bg};color:{badge_fg};
-                    border-radius:6px;font-size:0.85em;font-family:monospace;">
-          <strong>[admin] Sessão SIGARRA:</strong> {_esc(badge_label)}
-          <br><span style="opacity:0.85;">{_esc(sess_debug)}</span>
-        </div>"""
     if impersonated:
         nome_imp = f"{docente_nome} ({doc_codigo})" if docente_nome else doc_codigo
         admin_block += f"""
