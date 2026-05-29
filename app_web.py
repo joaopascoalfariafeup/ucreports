@@ -311,8 +311,8 @@ def _llm_model_options_map() -> dict[str, list[str]]:
     """Lê mapa provider->modelos de WEB_LLM_MODEL_OPTIONS_JSON.
 
     Formatos suportados (JSON):
-      {"anthropic": ["claude-sonnet-4-5", "claude-opus-4-7"]}
-      {"anthropic": "claude-sonnet-4-5, claude-opus-4-7"}
+      {"anthropic": ["claude-sonnet-4-6", "claude-opus-4-8"]}
+      {"anthropic": "claude-sonnet-4-6, claude-opus-4-8"}
     """
     raw = os.environ.get("WEB_LLM_MODEL_OPTIONS_JSON", "").strip()
     if not raw:
@@ -348,7 +348,7 @@ def _default_modelo_por_provider(provider: str) -> str:
         return os.environ.get("OPENAI_MODELO_ANALISE", "").strip() or "gpt-4o"
     if p == "iaedu":
         return os.environ.get("IAEDU_MODELO_ANALISE", "").strip() or "gpt-4o"
-    return os.environ.get("ANTHROPIC_MODELO_ANALISE", "").strip() or "claude-opus-4-7"
+    return os.environ.get("ANTHROPIC_MODELO_ANALISE", "").strip() or "claude-opus-4-8"
 
 
 def _default_modelo_cond_por_provider(provider: str) -> str:
@@ -357,7 +357,7 @@ def _default_modelo_cond_por_provider(provider: str) -> str:
         return os.environ.get("OPENAI_MODELO_CONDENSACAO", "").strip() or "gpt-4o-mini"
     if p == "iaedu":
         return os.environ.get("IAEDU_MODELO_CONDENSACAO", "").strip() or _default_modelo_por_provider(p)
-    return os.environ.get("ANTHROPIC_MODELO_CONDENSACAO", "").strip() or "claude-sonnet-4-5"
+    return os.environ.get("ANTHROPIC_MODELO_CONDENSACAO", "").strip() or "claude-sonnet-4-6"
 
 _COSTS_FILE = OUTPUT_DIR / "_web_costs_monthly.json"
 _USAGE_LOG_FILE = OUTPUT_DIR / "_web_usage_log.jsonl"
@@ -2396,7 +2396,7 @@ def ucs():
                 {llm_choice_option_tags}
               </select>
             </div>
-            <p class="muted" style="margin:6px 0 0 160px;font-size:0.88em;">Sugestão: use o modelo gratuito para testes e o claude-opus-4-7 para o relatório final.</p>
+            <p class="muted" style="margin:6px 0 0 160px;font-size:0.88em;">Sugestão: use o modelo gratuito para testes e o claude-opus-4-8 para o relatório final.</p>
             <div class="row" style="justify-content:flex-start; margin-top:12px;">
               <button class="btn" id="btn-gerar" type="submit">Gerar relatório</button>
             </div>
