@@ -40,8 +40,8 @@ def _carregar_prompt(nome_ficheiro: str) -> str:
 SYSTEM_PROMPT_INTEGRADO = _carregar_prompt("system_prompt.txt")
 
 # Modelos — configuráveis via .env, com defaults no código
-_MODELO_ANALISE_DEFAULT = "claude-opus-4-7"
-_MODELO_CONDENSACAO_DEFAULT = "claude-sonnet-4-5-20250929"
+_MODELO_ANALISE_DEFAULT = "claude-opus-5-5"
+_MODELO_CONDENSACAO_DEFAULT = "claude-sonnet-5-5"
 
 
 def _obter_provider() -> str:
