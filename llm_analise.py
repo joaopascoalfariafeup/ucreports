@@ -43,6 +43,10 @@ SYSTEM_PROMPT_INTEGRADO = _carregar_prompt("system_prompt.txt")
 _MODELO_ANALISE_DEFAULT = "claude-opus-5-5"
 _MODELO_CONDENSACAO_DEFAULT = "claude-sonnet-5-5"
 
+# Limites de output Anthropic (incluem tokens de thinking)
+_ANTHROPIC_MAX_TOKENS_ANALISE = 64000
+_ANTHROPIC_MAX_TOKENS_MIN = 16000
+
 
 def _texto_resposta_anthropic(message) -> str:
     """Concatena os blocos de texto da resposta, ignorando blocos de thinking."""
@@ -361,12 +365,16 @@ def _call_text_only_llm_once(
         }
 
     client = anthropic.Anthropic()
-    message = client.messages.create(
+    # Nos modelos com thinking sempre activo (ex: Opus/Sonnet 5.5) os tokens de
+    # thinking contam para max_tokens — garantir margem mínima. Streaming evita
+    # o limite de 10 min que o SDK impõe a pedidos não-streaming com max_tokens alto.
+    with client.messages.stream(
         model=model,
-        max_tokens=max_tokens,
+        max_tokens=max(max_tokens, _ANTHROPIC_MAX_TOKENS_MIN),
         system=system,
         messages=[{"role": "user", "content": user_text}],
-    )
+    ) as stream:
+        message = stream.get_final_message()
     return {
         "text": _texto_resposta_anthropic(message).strip(),
         "model": message.model,
@@ -1120,12 +1128,13 @@ com todas as secções delimitadas indicadas no system prompt.\
         content.append({"type": "text", "text": user_prompt})
 
         client = anthropic.Anthropic()
-        message = client.messages.create(
+        with client.messages.stream(
             model=modelo,
-            max_tokens=16384,
+            max_tokens=_ANTHROPIC_MAX_TOKENS_ANALISE,
             system=SYSTEM_PROMPT_INTEGRADO,
             messages=[{"role": "user", "content": content}],
-        )
+        ) as stream:
+            message = stream.get_final_message()
         resp = {
             "text": _texto_resposta_anthropic(message),
             "model": message.model,
