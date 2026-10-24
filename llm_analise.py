@@ -44,6 +44,11 @@ _MODELO_ANALISE_DEFAULT = "claude-opus-5-5"
 _MODELO_CONDENSACAO_DEFAULT = "claude-sonnet-5-5"
 
 
+def _texto_resposta_anthropic(message) -> str:
+    """Concatena os blocos de texto da resposta, ignorando blocos de thinking."""
+    return "".join(b.text for b in message.content if getattr(b, "type", "") == "text")
+
+
 def _obter_provider() -> str:
     """Provider LLM: anthropic (default), openai ou iaedu."""
     return os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()
@@ -363,7 +368,7 @@ def _call_text_only_llm_once(
         messages=[{"role": "user", "content": user_text}],
     )
     return {
-        "text": message.content[0].text.strip(),
+        "text": _texto_resposta_anthropic(message).strip(),
         "model": message.model,
         "input_tokens": int(message.usage.input_tokens),
         "output_tokens": int(message.usage.output_tokens),
@@ -1122,7 +1127,7 @@ com todas as secções delimitadas indicadas no system prompt.\
             messages=[{"role": "user", "content": content}],
         )
         resp = {
-            "text": message.content[0].text,
+            "text": _texto_resposta_anthropic(message),
             "model": message.model,
             "input_tokens": int(message.usage.input_tokens),
             "output_tokens": int(message.usage.output_tokens),
